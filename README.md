@@ -15,16 +15,39 @@ A comprehensive system for analyzing and enhancing AI prompts using advanced lan
 
 ```
 .
-├── backend/                 # FastAPI backend service
+├── backend/                        # FastAPI backend service
 │   ├── src/
 │   │   └── ai_prompt_enhancement/
-│   │       ├── api/        # API endpoints
-│   │       ├── core/       # Core configurations
-│   │       ├── services/   # Business logic
-│   │       └── schemas/    # Data models
-│   ├── tests/              # Test suite
-│   └── README.md           # Backend documentation
-└── README.md               # This file
+│   │       ├── api/               # API endpoints and routes
+│   │       │   └── prompt_routes.py  # Prompt analysis endpoints
+│   │       ├── core/              # Core configurations and settings
+│   │       │   └── config.py      # Application configuration
+│   │       ├── services/          # Business logic layer
+│   │       │   ├── analyzers.py   # LLM-based analyzers
+│   │       │   └── prompt_service.py  # Prompt analysis service
+│   │       ├── schemas/           # Data models and validation
+│   │       │   └── prompt.py      # Prompt-related schemas
+│   │       └── main.py            # Application entry point
+│   ├── tests/                     # Test suite
+│   │   ├── unit/                  # Unit tests
+│   │   │   └── test_services/     # Service layer tests
+│   │   ├── integration/           # Integration tests
+│   │   └── conftest.py            # Test configurations
+│   ├── pyproject.toml            # Python dependencies
+│   ├── .env.example              # Environment variables template
+│   └── README.md                 # Backend documentation
+├── .gitignore                    # Git ignore rules
+├── LICENSE                       # MIT License
+└── README.md                     # Project documentation
+
+Key Components:
+- api/: FastAPI route definitions and endpoint handlers
+- core/: Application configuration and core utilities
+- services/: Business logic implementation
+  - analyzers.py: Different LLM model implementations
+  - prompt_service.py: Main prompt analysis service
+- schemas/: Pydantic models for request/response validation
+- tests/: Comprehensive test suite with unit and integration tests
 ```
 
 ## Prerequisites
@@ -38,7 +61,7 @@ A comprehensive system for analyzing and enhancing AI prompts using advanced lan
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/ai-prompt-enhancement.git
+git clone https://github.com/HaoyangHan/ai-prompt-enhancement.git
 cd ai-prompt-enhancement
 ```
 
