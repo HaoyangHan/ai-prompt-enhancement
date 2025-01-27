@@ -1,5 +1,11 @@
 from typing import Dict, List, Optional
-from ..schemas.prompt import PromptAnalyzeRequest, PromptAnalysisResponse, AnalysisMetric
+from fastapi import HTTPException
+from ..schemas.prompt import (
+    PromptAnalyzeRequest,
+    PromptAnalysisResponse,
+    AnalysisMetric,
+    ModelType
+)
 from .deepseek_service import DeepseekService
 
 class PromptService:
@@ -10,6 +16,14 @@ class PromptService:
         """
         Analyze a prompt and provide improvement suggestions.
         """
+        model = request.preferences.model if request.preferences else ModelType.DEEPSEEK_V3
+        
+        if model != ModelType.DEEPSEEK_V3:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Model {model} is not currently supported. Please use {ModelType.DEEPSEEK_V3}."
+            )
+        
         # Get analysis from Deepseek
         analysis = await self.deepseek.analyze_prompt(
             prompt=request.prompt_text,
@@ -29,5 +43,6 @@ class PromptService:
         return PromptAnalysisResponse(
             metrics=metrics,
             suggestions=analysis["suggestions"],
-            enhanced_prompt=analysis["enhanced_prompt"]
+            enhanced_prompt=analysis["enhanced_prompt"],
+            model_used=model
         ) 

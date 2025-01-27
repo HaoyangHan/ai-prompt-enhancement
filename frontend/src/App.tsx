@@ -13,9 +13,14 @@ import {
   CircularProgress,
   List,
   ListItem,
-  ListItemText
+  ListItemText,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Alert
 } from '@mui/material';
-import { analyzePrompt } from './config/api';
+import { analyzePrompt, ModelType } from './config/api';
 
 // Create a theme similar to Citi's style
 const theme = createTheme({
@@ -73,17 +78,24 @@ function App() {
   const [analysis, setAnalysis] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [model, setModel] = useState<ModelType>(ModelType.DEEPSEEK_V3);
+  const [showWarning, setShowWarning] = useState(false);
+
+  const handleModelChange = (newModel: ModelType) => {
+    setModel(newModel);
+    setShowWarning(newModel !== ModelType.DEEPSEEK_V3);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     try {
-      const response = await analyzePrompt(prompt);
+      const response = await analyzePrompt(prompt, model);
       setAnalysis(response);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error:', error);
-      setError('Failed to analyze prompt. Please try again.');
+      setError(error.response?.data?.detail || 'Failed to analyze prompt. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -111,6 +123,26 @@ function App() {
             </Typography>
 
             <form onSubmit={handleSubmit}>
+              <FormControl fullWidth sx={{ mb: 3 }}>
+                <InputLabel id="model-select-label">Model</InputLabel>
+                <Select
+                  labelId="model-select-label"
+                  value={model}
+                  label="Model"
+                  onChange={(e) => handleModelChange(e.target.value as ModelType)}
+                >
+                  <MenuItem value={ModelType.DEEPSEEK_V3}>Deepseek v3</MenuItem>
+                  <MenuItem value={ModelType.GPT_4}>GPT-4</MenuItem>
+                  <MenuItem value={ModelType.CLAUDE_3_SONNET}>Claude 3 Sonnet</MenuItem>
+                </Select>
+              </FormControl>
+
+              {showWarning && (
+                <Alert severity="warning" sx={{ mb: 3 }}>
+                  This model is currently not available. Only Deepseek v3 is supported at the moment.
+                </Alert>
+              )}
+
               <TextField
                 fullWidth
                 multiline
@@ -155,7 +187,7 @@ function App() {
             {analysis && (
               <Box sx={{ mt: 6 }}>
                 <Typography variant="h6" gutterBottom>
-                  Analysis Results:
+                  Analysis Results (Using {analysis.model_used}):
                 </Typography>
                 <Paper 
                   variant="outlined" 

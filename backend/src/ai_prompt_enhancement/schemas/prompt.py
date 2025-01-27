@@ -1,9 +1,16 @@
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
+from enum import Enum
+
+class ModelType(str, Enum):
+    DEEPSEEK_V3 = "deepseek-v3"
+    GPT_4 = "gpt-4"
+    CLAUDE_3_SONNET = "claude-3-sonnet"
 
 class PromptPreferences(BaseModel):
     style: str = Field(default="professional", description="The desired writing style")
     tone: str = Field(default="neutral", description="The desired tone of voice")
+    model: ModelType = Field(default=ModelType.DEEPSEEK_V3, description="The model to use for analysis")
 
 class PromptAnalyzeRequest(BaseModel):
     prompt_text: str = Field(..., description="The prompt text to analyze")
@@ -18,4 +25,5 @@ class AnalysisMetric(BaseModel):
 class PromptAnalysisResponse(BaseModel):
     metrics: Dict[str, AnalysisMetric] = Field(..., description="Analysis metrics")
     suggestions: List[str] = Field(..., description="Overall improvement suggestions")
-    enhanced_prompt: Optional[str] = Field(None, description="Enhanced version of the prompt") 
+    enhanced_prompt: Optional[str] = Field(None, description="Enhanced version of the prompt")
+    model_used: ModelType = Field(..., description="The model used for analysis") 
