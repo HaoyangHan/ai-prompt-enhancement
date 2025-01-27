@@ -1,0 +1,40 @@
+ai_prompt_enhancement/
+├── pyproject.toml           # Poetry project configuration file
+├── README.md               # Project documentation
+├── .gitignore             # Git ignore file
+├── src/                   # Source code directory
+│   └── ai_prompt_enhancement/
+│       ├── __init__.py
+│       ├── main.py        # FastAPI application entry
+│       ├── api/           # API routes module
+│       │   ├── __init__.py
+│       │   ├── v1/
+│       │   │   ├── __init__.py
+│       │   │   ├── endpoints/
+│       │   │   │   ├── __init__.py
+│       │   │   │   ├── prompts.py
+│       │   │   │   └── scores.py
+│       ├── core/          # Core configuration
+│       │   ├── __init__.py
+│       │   ├── config.py
+│       │   └── settings.py
+│       ├── models/        # Data models
+│       │   ├── __init__.py
+│       │   └── prompt.py
+│       ├── schemas/       # Pydantic models
+│       │   ├── __init__.py
+│       │   └── prompt.py
+│       ├── services/      # Business logic
+│       │   ├── __init__.py
+│       │   ├── prompt_service.py
+│       │   └── scoring_service.py
+│       └── utils/         # Utility functions
+│           ├── __init__.py
+│           └── helpers.py
+└── tests/                 # Test directory
+    ├── __init__.py
+    ├── conftest.py       # pytest configuration
+    ├── test_api/
+    │   └── test_prompts.py
+    └── test_services/
+        └── test_prompt_service.py 
