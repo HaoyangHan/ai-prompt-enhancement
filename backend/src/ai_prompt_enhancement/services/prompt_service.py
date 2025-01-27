@@ -10,11 +10,13 @@ from ..schemas.prompt import (
     ModelType
 )
 from .deepseek_service import DeepseekService
+from .storage_service import StorageService
 import json
 
 class PromptService:
-    def __init__(self, deepseek_service: DeepseekService = Depends()):
+    def __init__(self, deepseek_service: DeepseekService = Depends(), storage_service: StorageService = Depends()):
         self.deepseek_service = deepseek_service
+        self.storage_service = storage_service
     
     async def analyze_prompt(self, request: PromptAnalyzeRequest) -> PromptAnalysisResponse:
         """
@@ -30,6 +32,11 @@ class PromptService:
                     request.context
                 )
                 logger.debug(f"Analysis result: {json.dumps(result, indent=2)}")
+                
+                # Save the analysis result
+                result['original_prompt'] = request.prompt_text
+                self.storage_service.save_analysis(result)
+                
                 return PromptAnalysisResponse(
                     **result,
                     model_used=request.preferences.model
@@ -52,36 +59,57 @@ class PromptService:
             Dict: Comparison results
         """
         logger.info("Processing comparison request")
+        logger.debug(f"Request type: {type(request)}")
+        logger.debug(f"Request attributes: {dir(request)}")
         
         try:
-            # If input is a string, try to parse it as JSON
-            if isinstance(request, str):
-                try:
-                    analysis_result = json.loads(request)
-                    logger.debug("Successfully parsed string input as JSON")
-                except json.JSONDecodeError as e:
-                    logger.error(f"Failed to parse string input as JSON: {str(e)}")
-                    raise ValueError("Invalid input format: string could not be parsed as JSON")
-            # If input is a dictionary-like object with analysis_result
-            elif hasattr(request, 'analysis_result'):
-                analysis_result = request.analysis_result
-                logger.debug("Extracted analysis_result from request object")
-            # If input is already a dictionary
-            elif isinstance(request, dict):
-                analysis_result = request
-                logger.debug("Using dictionary input directly")
+            # Convert request to dict if it's a Pydantic model
+            if hasattr(request, 'dict'):
+                logger.debug("Request is a Pydantic model")
+                request_data = request.dict()
+                logger.debug(f"Converted to dict: {json.dumps(request_data, indent=2)}")
             else:
-                logger.error(f"Unsupported input type: {type(request)}")
-                raise ValueError(f"Invalid input type: expected string, dictionary, or object with analysis_result, got {type(request)}")
-
-            # Log the processed analysis result
-            logger.debug(f"Processed analysis result:\n{json.dumps(analysis_result, indent=2)}")
+                logger.debug("Request is not a Pydantic model")
+                request_data = request
+                if isinstance(request_data, dict):
+                    logger.debug(f"Request data (dict): {json.dumps(request_data, indent=2)}")
+                else:
+                    logger.debug(f"Request data (raw): {request_data}")
             
-            # Call the DeepseekService with the processed analysis result
+            # Extract analysis result if it exists
+            if 'analysis_result' in request_data:
+                logger.debug("Found analysis_result in request")
+                analysis_result = request_data['analysis_result']
+            else:
+                analysis_result = request_data
+            
+            # Validate required fields in analysis_result
+            required_fields = ['metrics', 'suggestions', 'original_prompt', 'enhanced_prompt']
+            missing_fields = [field for field in required_fields if field not in analysis_result]
+            
+            if missing_fields:
+                logger.error(f"Missing required fields in analysis_result: {missing_fields}")
+                logger.error(f"Available fields in analysis_result: {list(analysis_result.keys())}")
+                raise ValueError(f"Missing required fields in analysis_result: {missing_fields}")
+            
+            # Process the request and get the comparison result
             result = await self.deepseek_service.compare_prompts(analysis_result)
+            
+            # Save the comparison result
+            self.storage_service.save_comparison(result)
+            
             return result
             
         except Exception as e:
-            logger.error(f"Error during prompt comparison: {str(e)}")
-            logger.exception("Full exception details:")
-            raise 
+            logger.error(f"Error in compare_prompts: {str(e)}")
+            logger.error(f"Error type: {type(e)}")
+            logger.exception("Full traceback:")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    def get_analysis_history(self) -> List[Dict]:
+        """Retrieve analysis history."""
+        return self.storage_service.get_analysis_history()
+    
+    def get_comparison_history(self) -> List[Dict]:
+        """Retrieve comparison history."""
+        return self.storage_service.get_comparison_history() 

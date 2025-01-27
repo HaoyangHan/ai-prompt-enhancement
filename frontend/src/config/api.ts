@@ -84,4 +84,61 @@ export const analyzePrompt = async (
   }
 };
 
+export const comparePrompts = async (analysisResult: any) => {
+  try {
+    // Log the incoming analysis result
+    console.log('Raw analysis result:', JSON.stringify(analysisResult, null, 2));
+    
+    const requestData = {
+      ...analysisResult,
+      preferences: {
+        style: "professional",
+        tone: "neutral",
+        model: ModelType.DEEPSEEK_CHAT
+      }
+    };
+    
+    // Log the formatted request data
+    console.log('Formatted request data:', JSON.stringify(requestData, null, 2));
+    
+    const response = await api.post('/api/v1/prompts/compare', requestData);
+    return response.data;
+  } catch (error) {
+    console.error('API Error:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Response:', error.response?.data);
+      console.error('Status:', error.response?.status);
+    }
+    throw error;
+  }
+};
+
+export const getAnalysisHistory = async () => {
+  try {
+    const response = await api.get('/api/v1/prompts/history/analysis');
+    return response.data;
+  } catch (error) {
+    console.error('API Error:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Response:', error.response?.data);
+      console.error('Status:', error.response?.status);
+    }
+    throw error;
+  }
+};
+
+export const getComparisonHistory = async () => {
+  try {
+    const response = await api.get('/api/v1/prompts/history/comparison');
+    return response.data;
+  } catch (error) {
+    console.error('API Error:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Response:', error.response?.data);
+      console.error('Status:', error.response?.status);
+    }
+    throw error;
+  }
+};
+
 export default api; 

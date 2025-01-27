@@ -149,11 +149,11 @@ You would receive something like this:
     "suggestions": ["Overall improvement recommendations"]
   },
   "enhanced_prompt": {
-    "prompt": "Complete enhanced version of the prompt",
+    "prompt": "Please analyze the given code sample and provide detailed refactoring suggestions with *specific examples* and clear output format",
     "metrics": {
       "clarity": {
         "score": float(0-1),
-        "description": "Evaluation of prompt clarity and specificity",
+        "description": "Evaluation of prompt clarity and specificity", 
         "suggestions": ["Clarity has been improved with more specific details"]
       },
       "structure": {
@@ -178,7 +178,7 @@ You would receive something like this:
       }
     },
     "suggestions": ["Overall improvement recommendations"],
-    "comparison": "The enhanced prompt has **<span style='color:green; font-weight:bold'>innovative content</span>** that was not present in the original prompt, such as [specific new elements]. Additionally, several parts of the original prompt have been *<span style='color:purple; font-style:italic'>polished</span>* for better accuracy and refinement, including [specific improvements]. Overall, the enhanced prompt provides a clearer and more structured approach to the task."
+    "highlighted_prompt": "Please *analyze* the given code sample and provide **detailed refactoring suggestions** with *specific examples* and **clear output format**",
   },
   "model_used": "DeepSeek Coder"
 }
@@ -186,10 +186,13 @@ You would receive something like this:
 # Task
 
 1. Generate identical metrics for enhanced prompt. 
-2. For the output, generate a strict json contains 2 value, first is original prompt, contains the original prompt, its metrics and suggestions. Next is enhanced prompt, contains enhanced prompt, its metrics and a value called comparison.
-3. in the comparison, generate the text in markdown format. Compares the original prompt and the enhanced prompt. The output should based on enhanced prompt. For those contents that are innovative or not shown in original prompt, highlight it using bold and green color in markdown. For those contents that are polished which is either more accurate, or refined, highlight it using italic and purple color in markdown. 
+2. For the output, generate a strict json contains 2 value, first is original prompt, contains the original prompt, its metrics and suggestions. Next is enhanced prompt, contains enhanced prompt, its metrics and a value called highlighted_prompt.
+3. in the highlighted_prompt, generate the text in Markdown format. 
+Take the enhanced prompt and highlight its contents: 
+For innovative or new content not shown in original prompt, highlight it using bold in Markdown. 
+For polished content that is either more accurate or refined, highlight it using italic in Markdown. 
 
 # note
 always return json only.
-Please generate the comparison using the rule.
+Please generate the highlighted prompt using the highlighting rules above. Only generate markdown
 """ 
