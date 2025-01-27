@@ -7,13 +7,40 @@ export enum ModelType {
 
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: 'http://192.168.31.208:8000',  // Use the server's IP address
+  baseURL: 'http://localhost:8000',  // Changed to localhost for local development
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
-  withCredentials: false  // Set to false since we're using IP address
+  withCredentials: false
 });
+
+// Add request interceptor for debugging
+api.interceptors.request.use(request => {
+  console.log('Request:', {
+    url: request.url,
+    method: request.method,
+    data: request.data,
+    headers: request.headers
+  });
+  return request;
+});
+
+// Add response interceptor for debugging
+api.interceptors.response.use(
+  response => {
+    console.log('Response:', response.data);
+    return response;
+  },
+  error => {
+    console.error('API Error:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    throw error;
+  }
+);
 
 export interface PromptPreferences {
   style: string;
@@ -27,7 +54,7 @@ export const analyzePrompt = async (
   context?: string
 ) => {
   try {
-    console.log('Sending request:', {
+    console.log('Analyzing prompt:', {
       prompt_text: prompt,
       context: context || null,
       preferences: {

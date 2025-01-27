@@ -27,4 +27,23 @@ class PromptAnalysisResponse(BaseModel):
     metrics: Dict[str, AnalysisMetric] = Field(..., description="Analysis metrics")
     suggestions: List[str] = Field(..., description="Overall improvement suggestions")
     enhanced_prompt: Optional[str] = Field(None, description="Enhanced version of the prompt")
-    model_used: ModelType = Field(..., description="The model used for analysis") 
+    model_used: ModelType = Field(..., description="The model used for analysis")
+
+class PromptComparisonRequest(BaseModel):
+    analysis_result: Dict = Field(..., description="The complete analysis result from the analyze endpoint")
+    preferences: Optional[PromptPreferences] = Field(default_factory=PromptPreferences)
+
+class ComparisonMetrics(BaseModel):
+    score: float = Field(..., ge=0, le=1, description="Score between 0 and 1")
+    description: str = Field(..., description="Description of the comparison")
+    suggestions: List[str] = Field(default_factory=list, description="Improvement suggestions")
+
+class PromptVersion(BaseModel):
+    prompt: str = Field(..., description="The prompt text")
+    metrics: Dict[str, ComparisonMetrics] = Field(..., description="Metrics for this version")
+    suggestions: List[str] = Field(..., description="Suggestions for this version")
+
+class PromptComparisonResponse(BaseModel):
+    original_prompt: PromptVersion = Field(..., description="Original prompt details")
+    enhanced_prompt: PromptVersion = Field(..., description="Enhanced prompt details with comparison")
+    model_used: ModelType = Field(..., description="The model used for comparison") 
