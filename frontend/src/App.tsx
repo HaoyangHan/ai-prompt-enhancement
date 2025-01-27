@@ -10,9 +10,12 @@ import {
   createTheme,
   AppBar,
   Toolbar,
-  CircularProgress
+  CircularProgress,
+  List,
+  ListItem,
+  ListItemText
 } from '@mui/material';
-import axios from 'axios';
+import { analyzePrompt } from './config/api';
 
 // Create a theme similar to Citi's style
 const theme = createTheme({
@@ -67,7 +70,7 @@ const theme = createTheme({
 
 function App() {
   const [prompt, setPrompt] = useState('');
-  const [enhancedPrompt, setEnhancedPrompt] = useState('');
+  const [analysis, setAnalysis] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -76,11 +79,11 @@ function App() {
     setLoading(true);
     setError('');
     try {
-      const response = await axios.post('/api/v1/enhance', { prompt });
-      setEnhancedPrompt(response.data.enhanced_prompt);
+      const response = await analyzePrompt(prompt);
+      setAnalysis(response);
     } catch (error) {
       console.error('Error:', error);
-      setError('Failed to enhance prompt. Please try again.');
+      setError('Failed to analyze prompt. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -92,7 +95,7 @@ function App() {
         <AppBar position="static" elevation={0}>
           <Toolbar>
             <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-              Auto Prompt Refinement
+              AI Prompt Enhancement
             </Typography>
           </Toolbar>
         </AppBar>
@@ -100,11 +103,11 @@ function App() {
         <Container maxWidth="md" sx={{ mt: 8, mb: 8 }}>
           <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
             <Typography variant="h1" gutterBottom align="center" sx={{ mb: 4 }}>
-              Auto Prompt Refinement
+              AI Prompt Enhancement
             </Typography>
             
             <Typography variant="body1" sx={{ mb: 4, color: 'text.secondary', textAlign: 'center' }}>
-              Enhance your prompts with AI-powered refinement for better results
+              Enhance your prompts with AI-powered analysis and suggestions
             </Typography>
 
             <form onSubmit={handleSubmit}>
@@ -143,16 +146,16 @@ function App() {
                   {loading ? (
                     <CircularProgress size={24} color="inherit" />
                   ) : (
-                    'Refine Prompt'
+                    'Analyze Prompt'
                   )}
                 </Button>
               </Box>
             </form>
 
-            {enhancedPrompt && (
+            {analysis && (
               <Box sx={{ mt: 6 }}>
                 <Typography variant="h6" gutterBottom>
-                  Enhanced Prompt:
+                  Analysis Results:
                 </Typography>
                 <Paper 
                   variant="outlined" 
@@ -163,29 +166,44 @@ function App() {
                     borderWidth: 1
                   }}
                 >
-                  <TextField
-                    fullWidth
-                    multiline
-                    rows={6}
-                    value={enhancedPrompt}
-                    InputProps={{ 
-                      readOnly: true,
-                      sx: { 
-                        bgcolor: 'background.paper',
-                        '& .MuiOutlinedInput-notchedOutline': {
-                          borderColor: 'transparent'
-                        }
-                      }
-                    }}
-                  />
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    sx={{ mt: 2 }}
-                    onClick={() => navigator.clipboard.writeText(enhancedPrompt)}
-                  >
-                    Copy to Clipboard
-                  </Button>
+                  <List>
+                    {analysis.suggestions.map((suggestion: string, index: number) => (
+                      <ListItem key={index}>
+                        <ListItemText primary={suggestion} />
+                      </ListItem>
+                    ))}
+                  </List>
+                  
+                  {analysis.enhanced_prompt && (
+                    <>
+                      <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                        Enhanced Version:
+                      </Typography>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={6}
+                        value={analysis.enhanced_prompt}
+                        InputProps={{ 
+                          readOnly: true,
+                          sx: { 
+                            bgcolor: 'background.paper',
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'transparent'
+                            }
+                          }
+                        }}
+                      />
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        sx={{ mt: 2 }}
+                        onClick={() => navigator.clipboard.writeText(analysis.enhanced_prompt)}
+                      >
+                        Copy to Clipboard
+                      </Button>
+                    </>
+                  )}
                 </Paper>
               </Box>
             )}
