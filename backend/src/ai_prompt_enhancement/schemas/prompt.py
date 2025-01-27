@@ -3,14 +3,15 @@ from typing import List, Dict, Optional
 from enum import Enum
 
 class ModelType(str, Enum):
-    DEEPSEEK_V3 = "deepseek-v3"
+    DEEPSEEK_CHAT = "deepseek-chat"
+    DEEPSEEK_REASONER = "deepseek-reasoner"
     GPT_4 = "gpt-4"
     CLAUDE_3_SONNET = "claude-3-sonnet"
 
 class PromptPreferences(BaseModel):
     style: str = Field(default="professional", description="The desired writing style")
     tone: str = Field(default="neutral", description="The desired tone of voice")
-    model: ModelType = Field(default=ModelType.DEEPSEEK_V3, description="The model to use for analysis")
+    model: ModelType = Field(default=ModelType.DEEPSEEK_CHAT, description="The model to use for analysis")
 
 class PromptAnalyzeRequest(BaseModel):
     prompt_text: str = Field(..., description="The prompt text to analyze")

@@ -18,9 +18,20 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Alert
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Tooltip,
+  LinearProgress,
+  Grid,
+  Divider
 } from '@mui/material';
 import { analyzePrompt, ModelType } from './config/api';
+import ReactMarkdown from 'react-markdown';
 
 // Create a theme similar to Citi's style
 const theme = createTheme({
@@ -73,17 +84,27 @@ const theme = createTheme({
   },
 });
 
+// Helper function to get color based on score
+const getScoreColor = (score: number): string => {
+  if (score < 0.4) return '#ff4444';  // Red
+  if (score < 0.7) return '#ffbb33';  // Yellow
+  return '#00C851';  // Green
+};
+
+// Helper function to format score as percentage
+const formatScore = (score: number): string => `${Math.round(score * 100)}%`;
+
 function App() {
   const [prompt, setPrompt] = useState('');
   const [analysis, setAnalysis] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [model, setModel] = useState<ModelType>(ModelType.DEEPSEEK_V3);
+  const [model, setModel] = useState<ModelType>(ModelType.DEEPSEEK_CHAT);
   const [showWarning, setShowWarning] = useState(false);
 
   const handleModelChange = (newModel: ModelType) => {
     setModel(newModel);
-    setShowWarning(newModel !== ModelType.DEEPSEEK_V3);
+    setShowWarning(newModel !== ModelType.DEEPSEEK_CHAT);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -95,10 +116,89 @@ function App() {
       setAnalysis(response);
     } catch (error: any) {
       console.error('Error:', error);
-      setError(error.response?.data?.detail || 'Failed to analyze prompt. Please try again.');
+      let errorMessage = 'Failed to analyze prompt. Please try again.';
+      if (error.response?.data?.detail) {
+        errorMessage = Array.isArray(error.response.data.detail) 
+          ? error.response.data.detail[0]?.msg || errorMessage
+          : error.response.data.detail;
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
+  };
+
+  const renderMetricsTable = (metrics: any) => {
+    // Filter out error metrics if present
+    const validMetrics = Object.entries(metrics).filter(([key]) => key !== 'error');
+    
+    return (
+      <TableContainer component={Paper} sx={{ mt: 3, mb: 3 }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell><strong>Metric</strong></TableCell>
+              <TableCell align="center"><strong>Score</strong></TableCell>
+              <TableCell><strong>Description</strong></TableCell>
+              <TableCell><strong>Suggestions</strong></TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {validMetrics.map(([key, value]: [string, any]) => (
+              <TableRow key={key}>
+                <TableCell component="th" scope="row" sx={{ textTransform: 'capitalize' }}>
+                  {key}
+                </TableCell>
+                <TableCell align="center">
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <Typography 
+                      sx={{ 
+                        color: getScoreColor(value.score),
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      {formatScore(value.score)}
+                    </Typography>
+                    <Tooltip title={`Score: ${formatScore(value.score)}`}>
+                      <LinearProgress
+                        variant="determinate"
+                        value={value.score * 100}
+                        sx={{
+                          width: '80%',
+                          height: 8,
+                          borderRadius: 4,
+                          bgcolor: '#e0e0e0',
+                          '& .MuiLinearProgress-bar': {
+                            bgcolor: getScoreColor(value.score),
+                            borderRadius: 4,
+                          }
+                        }}
+                      />
+                    </Tooltip>
+                  </Box>
+                </TableCell>
+                <TableCell>• {value.description}</TableCell>
+                <TableCell>
+                  <List dense disablePadding>
+                    {value.suggestions.map((suggestion: string, idx: number) => (
+                      <ListItem key={idx} dense disableGutters>
+                        <ListItemText 
+                          primary={
+                            <Typography variant="body2">
+                              • {suggestion}
+                            </Typography>
+                          } 
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    );
   };
 
   return (
@@ -131,15 +231,14 @@ function App() {
                   label="Model"
                   onChange={(e) => handleModelChange(e.target.value as ModelType)}
                 >
-                  <MenuItem value={ModelType.DEEPSEEK_V3}>Deepseek v3</MenuItem>
-                  <MenuItem value={ModelType.GPT_4}>GPT-4</MenuItem>
-                  <MenuItem value={ModelType.CLAUDE_3_SONNET}>Claude 3 Sonnet</MenuItem>
+                  <MenuItem value={ModelType.DEEPSEEK_CHAT}>Deepseek Chat</MenuItem>
+                  <MenuItem value={ModelType.DEEPSEEK_REASONER}>Deepseek Reasoner</MenuItem>
                 </Select>
               </FormControl>
 
               {showWarning && (
                 <Alert severity="warning" sx={{ mb: 3 }}>
-                  This model is currently not available. Only Deepseek v3 is supported at the moment.
+                  This model is currently not available. Only Deepseek Chat is supported at the moment.
                 </Alert>
               )}
 
@@ -157,7 +256,7 @@ function App() {
 
               {error && (
                 <Typography color="error" sx={{ mb: 2 }}>
-                  {error}
+                  {typeof error === 'string' ? error : 'An error occurred while analyzing the prompt. Please try again.'}
                 </Typography>
               )}
 
@@ -189,6 +288,14 @@ function App() {
                 <Typography variant="h6" gutterBottom>
                   Analysis Results (Using {analysis.model_used}):
                 </Typography>
+
+                {/* Render metrics table */}
+                {renderMetricsTable(analysis.metrics)}
+
+                {/* Overall Suggestions */}
+                <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+                  Overall Suggestions:
+                </Typography>
                 <Paper 
                   variant="outlined" 
                   sx={{ 
@@ -198,45 +305,99 @@ function App() {
                     borderWidth: 1
                   }}
                 >
-                  <List>
+                  <List dense>
                     {analysis.suggestions.map((suggestion: string, index: number) => (
                       <ListItem key={index}>
-                        <ListItemText primary={suggestion} />
+                        <ListItemText 
+                          primary={
+                            <Typography variant="body1">
+                              • {suggestion}
+                            </Typography>
+                          }
+                        />
                       </ListItem>
                     ))}
                   </List>
-                  
-                  {analysis.enhanced_prompt && (
-                    <>
-                      <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
-                        Enhanced Version:
-                      </Typography>
-                      <TextField
-                        fullWidth
-                        multiline
-                        rows={6}
-                        value={analysis.enhanced_prompt}
-                        InputProps={{ 
-                          readOnly: true,
-                          sx: { 
+                </Paper>
+
+                {/* Enhanced Prompt Section */}
+                {analysis.enhanced_prompt && (
+                  <Box sx={{ mt: 4 }}>
+                    <Typography variant="h6" gutterBottom>
+                      Enhanced Version:
+                    </Typography>
+                    <Grid container spacing={2}>
+                      {/* Rendered Markdown */}
+                      <Grid item xs={6}>
+                        <Paper 
+                          sx={{ 
+                            p: 3, 
+                            height: '100%',
                             bgcolor: 'background.paper',
-                            '& .MuiOutlinedInput-notchedOutline': {
-                              borderColor: 'transparent'
-                            }
-                          }
-                        }}
-                      />
+                            '& pre': { whiteSpace: 'pre-wrap', wordBreak: 'break-word' }
+                          }}
+                        >
+                          <Typography variant="subtitle2" gutterBottom color="primary">
+                            Rendered Markdown
+                          </Typography>
+                          <Divider sx={{ mb: 2 }} />
+                          <ReactMarkdown>
+                            {analysis.enhanced_prompt}
+                          </ReactMarkdown>
+                        </Paper>
+                      </Grid>
+                      
+                      {/* Source Markdown */}
+                      <Grid item xs={6}>
+                        <Paper 
+                          sx={{ 
+                            p: 3,
+                            height: '100%',
+                            bgcolor: '#f5f5f5'
+                          }}
+                        >
+                          <Typography variant="subtitle2" gutterBottom color="primary">
+                            Source Markdown
+                          </Typography>
+                          <Divider sx={{ mb: 2 }} />
+                          <TextField
+                            fullWidth
+                            multiline
+                            rows={10}
+                            value={analysis.enhanced_prompt}
+                            InputProps={{ 
+                              readOnly: true,
+                              sx: { 
+                                fontFamily: 'monospace',
+                                bgcolor: 'background.paper'
+                              }
+                            }}
+                          />
+                        </Paper>
+                      </Grid>
+                    </Grid>
+                    <Box sx={{ mt: 2, display: 'flex', gap: 2 }}>
                       <Button
                         variant="outlined"
                         color="primary"
-                        sx={{ mt: 2 }}
                         onClick={() => navigator.clipboard.writeText(analysis.enhanced_prompt)}
                       >
-                        Copy to Clipboard
+                        Copy Source
                       </Button>
-                    </>
-                  )}
-                </Paper>
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => {
+                          const tempElement = document.createElement('div');
+                          tempElement.innerHTML = analysis.enhanced_prompt;
+                          navigator.clipboard.writeText(tempElement.textContent || '');
+                        }}
+                      >
+                        Copy Plain Text
+                      </Button>
+                    </Box>
+                  </Box>
+                )}
               </Box>
             )}
           </Paper>
