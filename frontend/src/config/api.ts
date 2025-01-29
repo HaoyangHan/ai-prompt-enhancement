@@ -64,7 +64,7 @@ export const analyzePrompt = async (
       }
     });
     
-    const response = await api.post('/api/v1/prompts/analyze', {
+    const response = await api.post('/api/v1/prompts/refinement/analyze', {
       prompt_text: prompt,
       context: context || null,
       preferences: {
@@ -101,7 +101,7 @@ export const comparePrompts = async (analysisResult: any) => {
     // Log the formatted request data
     console.log('Formatted request data:', JSON.stringify(requestData, null, 2));
     
-    const response = await api.post('/api/v1/prompts/compare', requestData);
+    const response = await api.post('/api/v1/prompts/refinement/compare', requestData);
     return response.data;
   } catch (error) {
     console.error('API Error:', error);

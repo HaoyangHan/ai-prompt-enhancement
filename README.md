@@ -1,3 +1,108 @@
+# AI Prompt Enhancement Application
+
+A comprehensive application for analyzing, refining, and evaluating AI prompts.
+
+## Backend Structure
+
+The backend is organized into domain-specific services and core services for better separation of concerns:
+
+### Core Services
+
+- **Config Service**: Manages application configuration using environment variables and YAML files
+- **Logging Service**: Provides centralized logging with console and file outputs
+- **Storage Service**: Handles data persistence for analysis history, comparisons, and datasets
+
+### Domain Services
+
+1. **Model Service**
+   - Manages interactions with AI models
+   - Handles model capabilities and configurations
+   - Currently supports Deepseek models
+
+2. **Prompt Refinement Service**
+   - Analyzes prompt quality and metrics
+   - Provides prompt enhancement suggestions
+   - Compares original and enhanced prompts
+
+3. **Evaluation Service**
+   - Manages evaluation prompts and templates
+   - Validates prompt variables against datasets
+   - Prepares evaluation data from CSV inputs
+
+## Directory Structure
+
+```
+backend/
+├── src/
+│   └── ai_prompt_enhancement/
+│       ├── services/
+│       │   ├── core/
+│       │   │   ├── config_service.py
+│       │   │   ├── logging_service.py
+│       │   │   └── storage_service.py
+│       │   ├── model/
+│       │   │   └── deepseek_service.py
+│       │   ├── prompt_refinement/
+│       │   │   ├── analyzers.py
+│       │   │   ├── prompt_templates.py
+│       │   │   └── refinement_service.py
+│       │   └── evaluation/
+│       │       ├── evaluation_prompts.py
+│       │       └── evaluation_service.py
+│       └── api/
+│           ├── routes/
+│           │   ├── evaluation.py
+│           │   ├── model.py
+│           │   └── refinement.py
+│           └── main.py
+├── data/
+│   ├── analysis/
+│   ├── comparisons/
+│   ├── evaluations/
+│   └── datasets/
+└── logs/
+```
+
+## Configuration
+
+The application can be configured using:
+1. Environment variables
+2. YAML configuration file
+3. Runtime updates via the config service
+
+Key configuration options include:
+- API settings (host, port, debug mode)
+- Model settings (default model, timeout, token limits)
+- Storage settings (data and log directories)
+- CORS settings
+
+## Getting Started
+
+1. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+2. Set up configuration:
+- Copy `config.example.yaml` to `config.yaml`
+- Modify settings as needed
+
+3. Run the application:
+```bash
+uvicorn ai_prompt_enhancement.api.main:app --reload
+```
+
+## API Documentation
+
+The API documentation is available at `/docs` when running the application.
+
+Key endpoints:
+- `/api/v1/refinement/analyze`: Analyze and enhance prompts
+- `/api/v1/refinement/compare`: Compare original and enhanced prompts
+- `/api/v1/evaluation/prompts`: Get available evaluation prompts
+- `/api/v1/evaluation/validate`: Validate prompt variables
+- `/api/v1/model/capabilities`: Get model capabilities
+
 # AI Prompt Enhancement System
 
 A comprehensive system for analyzing and enhancing AI prompts using advanced language models. The system provides detailed metrics and suggestions to improve prompt effectiveness.

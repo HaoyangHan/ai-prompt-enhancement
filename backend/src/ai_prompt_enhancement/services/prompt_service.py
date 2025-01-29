@@ -9,8 +9,8 @@ from ..schemas.prompt import (
     AnalysisMetric,
     ModelType
 )
-from .deepseek_service import DeepseekService
-from .storage_service import StorageService
+from .model.deepseek_service import DeepseekService
+from .core.storage_service import StorageService
 import json
 
 class PromptService:
@@ -35,7 +35,7 @@ class PromptService:
                 
                 # Save the analysis result
                 result['original_prompt'] = request.prompt_text
-                self.storage_service.save_analysis(result)
+                self.storage_service.save_analysis_history(result)
                 
                 return PromptAnalysisResponse(
                     **result,
@@ -96,7 +96,7 @@ class PromptService:
             result = await self.deepseek_service.compare_prompts(analysis_result)
             
             # Save the comparison result
-            self.storage_service.save_comparison(result)
+            self.storage_service.save_comparison_history(result)
             
             return result
             

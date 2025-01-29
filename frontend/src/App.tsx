@@ -40,6 +40,7 @@ import {
   History as HistoryIcon,
   Analytics as AnalyticsIcon,
   ChevronRight as ChevronRightIcon,
+  ChevronLeft as ChevronLeftIcon,
 } from '@mui/icons-material';
 import { analyzePrompt, getAnalysisHistory, getComparisonHistory, ModelType } from './config/api';
 import ReactMarkdown from 'react-markdown';
@@ -131,7 +132,7 @@ const getScoreColor = (score: number): string => {
 const formatScore = (score: number): string => `${Math.round(score * 100)}%`;
 
 // Define view types
-type ViewType = 'analyze' | 'compare' | 'analysis-history' | 'comparison-history';
+type ViewType = 'analyze' | 'compare' | 'analysis-history' | 'comparison-history' | 'prompt-comparison' | 'prompt-evaluation';
 
 interface Metric {
     score: number;
@@ -156,6 +157,30 @@ interface ComparisonResult {
     };
     model_used: string;
 }
+
+interface EvaluationPrompt {
+  id: string;
+  name: string;
+  description: string;
+  prompt: string;
+  variables: string[];
+}
+
+// Add sample prompts data
+const SAMPLE_PROMPTS = [
+  {
+    title: "Congratulatory Email",
+    prompt: "Write a congratulatory email to a team member who successfully completed a major project. Include specific achievements and maintain a professional tone.",
+  },
+  {
+    title: "Product Description",
+    prompt: "Create a compelling product description for a new eco-friendly water bottle. Highlight its sustainable features and unique selling points.",
+  },
+  {
+    title: "Meeting Summary",
+    prompt: "Summarize the key points from our quarterly review meeting, including project updates, challenges, and next steps. Keep it concise and actionable.",
+  }
+];
 
 const LoadingState = ({ message }: { message: string }) => (
   <Box sx={{ 
@@ -187,7 +212,10 @@ function App() {
   const [currentView, setCurrentView] = useState<ViewType>('analyze');
   const [comparison, setComparison] = useState<any>(null);
   const [userInstruction, setUserInstruction] = useState('');
-  const drawerWidth = 240;
+  const [isDrawerExpanded, setIsDrawerExpanded] = useState(true);
+  const expandedDrawerWidth = 280;
+  const collapsedDrawerWidth = 65;
+  const drawerWidth = isDrawerExpanded ? expandedDrawerWidth : collapsedDrawerWidth;
   const [isGenerating, setIsGenerating] = useState(false);
   const [analyzeStartTime, setAnalyzeStartTime] = useState<number | null>(null);
   const [analyzeEndTime, setAnalyzeEndTime] = useState<number | null>(null);
@@ -201,6 +229,18 @@ function App() {
     comparison: []
   });
   const [comparisonSessions, setComparisonSessions] = useState<{[key: string]: any}>({});
+  const [selectedPromptId, setSelectedPromptId] = useState<string>('');
+  const [customPrompt, setCustomPrompt] = useState('');
+  const [isCustomPrompt, setIsCustomPrompt] = useState(false);
+  const [selectedModels, setSelectedModels] = useState<ModelType[]>([]);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [promptValidation, setPromptValidation] = useState<{
+    isValid: boolean;
+    message: string;
+    variables?: string[];
+  } | null>(null);
+  const [evaluationPrompts, setEvaluationPrompts] = useState<EvaluationPrompt[]>([]);
+  const [promptFetchError, setPromptFetchError] = useState<string | null>(null);
 
   const handleModelChange = (newModel: ModelType) => {
     setModel(newModel);
@@ -422,19 +462,22 @@ function App() {
       sx={{
         width: drawerWidth,
         flexShrink: 0,
+        transition: 'width 0.3s ease',
         '& .MuiDrawer-paper': {
           width: drawerWidth,
           boxSizing: 'border-box',
           bgcolor: 'background.paper',
           borderRight: 'none',
           boxShadow: '2px 0 8px rgba(0,0,0,0.1)',
+          transition: 'width 0.3s ease',
+          overflowX: 'hidden',
         },
       }}
     >
-      <Toolbar sx={{ minHeight: '64px !important' }} />
+      <Toolbar />
       <Box sx={{ overflow: 'auto', mt: 1, px: 2 }}>
         <List>
-          <ListItem sx={{ mb: 1 }}>
+          <ListItem sx={{ mb: 1, display: isDrawerExpanded ? 'block' : 'none' }}>
             <Typography variant="subtitle1" color="primary" sx={{ fontWeight: 600 }}>
               Current Prompt
             </Typography>
@@ -445,6 +488,9 @@ function App() {
             sx={{
               borderRadius: 1,
               mb: 1,
+              minHeight: 48,
+              justifyContent: isDrawerExpanded ? 'initial' : 'center',
+              px: 2.5,
               '&.Mui-selected': {
                 backgroundColor: 'primary.light',
                 color: 'white',
@@ -454,19 +500,26 @@ function App() {
               },
             }}
           >
-            <ListItemIcon>
+            <ListItemIcon sx={{
+              minWidth: 0,
+              mr: isDrawerExpanded ? 3 : 'auto',
+              justifyContent: 'center',
+            }}>
               <AnalyticsIcon color={currentView === 'analyze' ? 'secondary' : 'inherit'} />
             </ListItemIcon>
-            <ListItemText 
-              primary="Analyze" 
-              sx={{ 
-                '& .MuiTypography-root': { 
-                  fontWeight: currentView === 'analyze' ? 600 : 400 
-                } 
-              }}
-            />
-            {currentView === 'analyze' && <ChevronRightIcon color="secondary" />}
+            {isDrawerExpanded && (
+              <ListItemText 
+                primary="Prompt Refinement" 
+                sx={{ 
+                  opacity: isDrawerExpanded ? 1 : 0,
+                  '& .MuiTypography-root': { 
+                    fontWeight: currentView === 'analyze' ? 600 : 400 
+                  } 
+                }}
+              />
+            )}
           </ListItemButton>
+
           <ListItemButton
             selected={currentView === 'compare'}
             onClick={handleCompare}
@@ -474,6 +527,9 @@ function App() {
             sx={{
               borderRadius: 1,
               mb: 1,
+              minHeight: 48,
+              justifyContent: isDrawerExpanded ? 'initial' : 'center',
+              px: 2.5,
               '&.Mui-selected': {
                 backgroundColor: 'primary.light',
                 color: 'white',
@@ -483,21 +539,110 @@ function App() {
               },
             }}
           >
-            <ListItemIcon>
+            <ListItemIcon sx={{
+              minWidth: 0,
+              mr: isDrawerExpanded ? 3 : 'auto',
+              justifyContent: 'center',
+            }}>
               <CompareIcon color={currentView === 'compare' ? 'secondary' : 'inherit'} />
             </ListItemIcon>
-            <ListItemText 
-              primary="Comparison" 
-              sx={{ 
-                '& .MuiTypography-root': { 
-                  fontWeight: currentView === 'compare' ? 600 : 400 
-                } 
-              }}
-            />
-            {currentView === 'compare' && <ChevronRightIcon color="secondary" />}
+            {isDrawerExpanded && (
+              <ListItemText 
+                primary="Advanced Analytics on Refined Prompt" 
+                sx={{ 
+                  opacity: isDrawerExpanded ? 1 : 0,
+                  '& .MuiTypography-root': { 
+                    fontWeight: currentView === 'compare' ? 600 : 400 
+                  } 
+                }}
+              />
+            )}
           </ListItemButton>
-          <Divider sx={{ my: 2 }} />
-          <ListItem sx={{ mb: 1 }}>
+
+          {/* Evaluation Section */}
+          <ListItem sx={{ mb: 1, mt: 2, display: isDrawerExpanded ? 'block' : 'none' }}>
+            <Typography variant="subtitle1" color="primary" sx={{ fontWeight: 600 }}>
+              Evaluation
+            </Typography>
+          </ListItem>
+          <ListItemButton
+            selected={currentView === 'prompt-comparison'}
+            onClick={() => setCurrentView('prompt-comparison')}
+            sx={{
+              borderRadius: 1,
+              mb: 1,
+              minHeight: 48,
+              justifyContent: isDrawerExpanded ? 'initial' : 'center',
+              px: 2.5,
+              '&.Mui-selected': {
+                backgroundColor: 'primary.light',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'primary.light',
+                },
+              },
+            }}
+          >
+            <ListItemIcon sx={{
+              minWidth: 0,
+              mr: isDrawerExpanded ? 3 : 'auto',
+              justifyContent: 'center',
+            }}>
+              <CompareIcon color={currentView === 'prompt-comparison' ? 'secondary' : 'inherit'} />
+            </ListItemIcon>
+            {isDrawerExpanded && (
+              <ListItemText 
+                primary="Prompt Comparison on Data" 
+                sx={{ 
+                  opacity: isDrawerExpanded ? 1 : 0,
+                  '& .MuiTypography-root': { 
+                    fontWeight: currentView === 'prompt-comparison' ? 600 : 400 
+                  } 
+                }}
+              />
+            )}
+          </ListItemButton>
+          <ListItemButton
+            selected={currentView === 'prompt-evaluation'}
+            onClick={() => setCurrentView('prompt-evaluation')}
+            sx={{
+              borderRadius: 1,
+              mb: 1,
+              minHeight: 48,
+              justifyContent: isDrawerExpanded ? 'initial' : 'center',
+              px: 2.5,
+              '&.Mui-selected': {
+                backgroundColor: 'primary.light',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'primary.light',
+                },
+              },
+            }}
+          >
+            <ListItemIcon sx={{
+              minWidth: 0,
+              mr: isDrawerExpanded ? 3 : 'auto',
+              justifyContent: 'center',
+            }}>
+              <AnalyticsIcon color={currentView === 'prompt-evaluation' ? 'secondary' : 'inherit'} />
+            </ListItemIcon>
+            {isDrawerExpanded && (
+              <ListItemText 
+                primary="Prompt Evaluation" 
+                sx={{ 
+                  opacity: isDrawerExpanded ? 1 : 0,
+                  '& .MuiTypography-root': { 
+                    fontWeight: currentView === 'prompt-evaluation' ? 600 : 400 
+                  } 
+                }}
+              />
+            )}
+          </ListItemButton>
+
+          <Divider sx={{ my: 2, display: isDrawerExpanded ? 'block' : 'none' }} />
+          
+          <ListItem sx={{ mb: 1, display: isDrawerExpanded ? 'block' : 'none' }}>
             <Typography variant="subtitle1" color="primary" sx={{ fontWeight: 600 }}>
               Historical Prompts
             </Typography>
@@ -508,6 +653,9 @@ function App() {
             sx={{
               borderRadius: 1,
               mb: 1,
+              minHeight: 48,
+              justifyContent: isDrawerExpanded ? 'initial' : 'center',
+              px: 2.5,
               '&.Mui-selected': {
                 backgroundColor: 'primary.light',
                 color: 'white',
@@ -517,18 +665,24 @@ function App() {
               },
             }}
           >
-            <ListItemIcon>
+            <ListItemIcon sx={{
+              minWidth: 0,
+              mr: isDrawerExpanded ? 3 : 'auto',
+              justifyContent: 'center',
+            }}>
               <DescriptionIcon color={currentView === 'analysis-history' ? 'secondary' : 'inherit'} />
             </ListItemIcon>
-            <ListItemText 
-              primary="Analysis History" 
-              sx={{ 
-                '& .MuiTypography-root': { 
-                  fontWeight: currentView === 'analysis-history' ? 600 : 400 
-                } 
-              }}
-            />
-            {currentView === 'analysis-history' && <ChevronRightIcon color="secondary" />}
+            {isDrawerExpanded && (
+              <ListItemText 
+                primary="Analysis History" 
+                sx={{ 
+                  opacity: isDrawerExpanded ? 1 : 0,
+                  '& .MuiTypography-root': { 
+                    fontWeight: currentView === 'analysis-history' ? 600 : 400 
+                  } 
+                }}
+              />
+            )}
           </ListItemButton>
           <ListItemButton
             selected={currentView === 'comparison-history'}
@@ -536,6 +690,9 @@ function App() {
             sx={{
               borderRadius: 1,
               mb: 1,
+              minHeight: 48,
+              justifyContent: isDrawerExpanded ? 'initial' : 'center',
+              px: 2.5,
               '&.Mui-selected': {
                 backgroundColor: 'primary.light',
                 color: 'white',
@@ -545,18 +702,24 @@ function App() {
               },
             }}
           >
-            <ListItemIcon>
+            <ListItemIcon sx={{
+              minWidth: 0,
+              mr: isDrawerExpanded ? 3 : 'auto',
+              justifyContent: 'center',
+            }}>
               <CompareIcon color={currentView === 'comparison-history' ? 'secondary' : 'inherit'} />
             </ListItemIcon>
-            <ListItemText 
-              primary="Comparison History" 
-              sx={{ 
-                '& .MuiTypography-root': { 
-                  fontWeight: currentView === 'comparison-history' ? 600 : 400 
-                } 
-              }}
-            />
-            {currentView === 'comparison-history' && <ChevronRightIcon color="secondary" />}
+            {isDrawerExpanded && (
+              <ListItemText 
+                primary="Comparison History" 
+                sx={{ 
+                  opacity: isDrawerExpanded ? 1 : 0,
+                  '& .MuiTypography-root': { 
+                    fontWeight: currentView === 'comparison-history' ? 600 : 400 
+                  } 
+                }}
+              />
+            )}
           </ListItemButton>
         </List>
       </Box>
@@ -592,7 +755,7 @@ function App() {
         <Box sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h5">
-                    Prompt Comparison
+                    Advanced Analytics on Refined Prompt
                 </Typography>
                 <Button
                     variant="contained"
@@ -951,9 +1114,55 @@ function App() {
     );
   };
 
+  const handleSamplePromptClick = (prompt: string) => {
+    setPrompt(prompt);
+  };
+
+  const renderSamplePrompts = () => (
+    <Box sx={{ mb: 4 }}>
+      <Typography variant="subtitle1" gutterBottom color="primary" sx={{ fontWeight: 600 }}>
+        Sample Prompts
+      </Typography>
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        {SAMPLE_PROMPTS.map((sample, index) => (
+          <Paper
+            key={index}
+            sx={{
+              p: 2,
+              cursor: 'pointer',
+              minWidth: 200,
+              maxWidth: 300,
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: 3,
+                bgcolor: 'primary.light',
+                color: 'white',
+              },
+            }}
+            onClick={() => handleSamplePromptClick(sample.prompt)}
+          >
+            <Typography variant="subtitle2" gutterBottom>
+              {sample.title}
+            </Typography>
+            <Typography variant="body2" sx={{ 
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+            }}>
+              {sample.prompt}
+            </Typography>
+          </Paper>
+        ))}
+      </Box>
+    </Box>
+  );
+
   const renderAnalysisContent = () => {
     if (isGenerating) {
-      return <LoadingState message="Analyzing your prompt..." />;
+      return <LoadingState message="Refining your prompt..." />;
     }
 
     if (error) {
@@ -990,8 +1199,11 @@ function App() {
           </Typography>
           
           <Typography variant="body1" sx={{ mb: 4, color: 'text.secondary', textAlign: 'center' }}>
-            Enhance your prompts with AI-powered analysis and suggestions
+            Refine and enhance your prompts with AI-powered analysis
           </Typography>
+
+          {/* Add sample prompts section */}
+          {renderSamplePrompts()}
 
           <form onSubmit={handleSubmit}>
             <FormControl fullWidth sx={{ mb: 3 }}>
@@ -1169,41 +1381,268 @@ function App() {
     );
   };
 
-  const renderComparisonContent = () => {
-    if (isGenerating) {
-      return <LoadingState message="Generating comparison..." />;
-    }
+  const renderPromptComparisonView = () => {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h5" gutterBottom>
+          Prompt Comparison on Data
+        </Typography>
+        {/* Content will be added later */}
+        <Typography variant="body1" color="text.secondary">
+          Coming soon: Compare multiple prompts and analyze their effectiveness using data-driven metrics.
+        </Typography>
+      </Box>
+    );
+  };
 
-    if (error) {
-      return (
-        <Box sx={{ textAlign: 'center', mt: 4 }}>
-          <Typography color="error" variant="h6" gutterBottom>
-            {error}
+  const fetchEvaluationPrompts = async () => {
+    try {
+      setPromptFetchError(null);
+      const response = await fetch('http://localhost:8000/api/v1/evaluation/prompts');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch prompts: ${response.statusText}`);
+      }
+      const prompts = await response.json();
+      setEvaluationPrompts(prompts);
+    } catch (error) {
+      console.error('Error fetching evaluation prompts:', error);
+      setPromptFetchError('Failed to load evaluation prompts. Please try refreshing the page.');
+    }
+  };
+
+  useEffect(() => {
+    if (currentView === 'prompt-evaluation') {
+      fetchEvaluationPrompts();
+    }
+  }, [currentView]);
+
+  const renderPromptEvaluationView = () => {
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (file && file.type === 'text/csv') {
+        setUploadedFile(file);
+      }
+    };
+
+    const handlePromptSelect = (promptId: string) => {
+      setSelectedPromptId(promptId);
+      setIsCustomPrompt(false);
+      // Reset validation when changing prompts
+      setPromptValidation(null);
+    };
+
+    const handleCustomPromptToggle = () => {
+      setIsCustomPrompt(true);
+      setSelectedPromptId('');
+      setPromptValidation(null);
+    };
+
+    const validatePrompt = async () => {
+      const promptToValidate = isCustomPrompt ? customPrompt : 
+        evaluationPrompts.find(p => p.id === selectedPromptId)?.prompt || '';
+
+      try {
+        const response = await fetch('http://localhost:8000/api/v1/prompts/validate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            prompt: promptToValidate,
+            file: uploadedFile ? await uploadedFile.text() : null
+          }),
+        });
+
+        const result = await response.json();
+        setPromptValidation(result);
+      } catch (error) {
+        setPromptValidation({
+          isValid: false,
+          message: 'Failed to validate prompt. Please try again.'
+        });
+      }
+    };
+
+    const handleStartEvaluation = () => {
+      // To be implemented in the next phase
+      console.log('Starting evaluation...');
+    };
+
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography variant="h5" gutterBottom>
+          LLM-as-a-judge Evaluation
+        </Typography>
+
+        {promptFetchError && (
+          <Alert 
+            severity="error" 
+            sx={{ mb: 3 }}
+            action={
+              <Button 
+                color="inherit" 
+                size="small" 
+                onClick={() => {
+                  setPromptFetchError(null);
+                  fetchEvaluationPrompts();
+                }}
+              >
+                Retry
+              </Button>
+            }
+          >
+            {promptFetchError}
+          </Alert>
+        )}
+
+        {/* Dataset Upload Section */}
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Upload Dataset
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 2 }}>
-            <Button 
-              variant="contained" 
-              color="primary" 
-              onClick={() => {
-                setError('');
-                setCurrentView('analyze');
-              }}
-            >
-              Back to Analysis
-            </Button>
-            <Button 
-              variant="outlined" 
-              color="primary" 
-              onClick={handleStartOver}
-            >
-              Start Over
-            </Button>
+          <Box sx={{ mb: 2 }}>
+            <input
+              accept=".csv"
+              style={{ display: 'none' }}
+              id="csv-file-upload"
+              type="file"
+              onChange={handleFileUpload}
+            />
+            <label htmlFor="csv-file-upload">
+              <Button
+                variant="outlined"
+                component="span"
+                startIcon={<DescriptionIcon />}
+              >
+                Upload CSV File
+              </Button>
+            </label>
+            {uploadedFile && (
+              <Typography variant="body2" sx={{ mt: 1, color: 'success.main' }}>
+                File uploaded: {uploadedFile.name}
+              </Typography>
+            )}
           </Box>
-        </Box>
-      );
-    }
+        </Paper>
 
-    return renderComparisonView();
+        {/* Prompt Selection Section */}
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Select Evaluation Prompt
+          </Typography>
+          
+          {/* Pre-designed prompts */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Pre-designed Prompts
+            </Typography>
+            <Grid container spacing={2}>
+              {evaluationPrompts.map((prompt) => (
+                <Grid item xs={12} md={4} key={prompt.id}>
+                  <Paper
+                    elevation={selectedPromptId === prompt.id ? 3 : 1}
+                    sx={{
+                      p: 2,
+                      cursor: 'pointer',
+                      border: selectedPromptId === prompt.id ? 2 : 1,
+                      borderColor: selectedPromptId === prompt.id ? 'primary.main' : 'divider',
+                      '&:hover': {
+                        borderColor: 'primary.main',
+                      },
+                    }}
+                    onClick={() => handlePromptSelect(prompt.id)}
+                  >
+                    <Typography variant="subtitle1" gutterBottom>
+                      {prompt.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {prompt.description}
+                    </Typography>
+                  </Paper>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+
+          {/* Custom prompt option */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Custom Prompt
+            </Typography>
+            <Button
+              variant={isCustomPrompt ? "contained" : "outlined"}
+              onClick={handleCustomPromptToggle}
+              sx={{ mb: 2 }}
+            >
+              Use Custom Prompt
+            </Button>
+            {isCustomPrompt && (
+              <TextField
+                fullWidth
+                multiline
+                rows={4}
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                placeholder="Enter your custom prompt with variables in {variable_name} format"
+                helperText="Example: Rate the sentiment of this review: {review_text}. Explain your rating."
+              />
+            )}
+          </Box>
+        </Paper>
+
+        {/* Model Selection Section */}
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Select Models
+          </Typography>
+          <FormControl fullWidth>
+            <InputLabel id="models-select-label">Models</InputLabel>
+            <Select
+              labelId="models-select-label"
+              multiple
+              value={selectedModels}
+              onChange={(e) => setSelectedModels(e.target.value as ModelType[])}
+              renderValue={(selected) => selected.join(', ')}
+            >
+              <MenuItem value={ModelType.DEEPSEEK_CHAT}>Deepseek Chat</MenuItem>
+              <MenuItem value={ModelType.DEEPSEEK_REASONER}>Deepseek Reasoner</MenuItem>
+            </Select>
+          </FormControl>
+        </Paper>
+
+        {/* Validation and Start Button */}
+        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+          <Button
+            variant="outlined"
+            onClick={validatePrompt}
+            disabled={!uploadedFile || (!selectedPromptId && !customPrompt)}
+          >
+            Validate Setup
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleStartEvaluation}
+            disabled={!promptValidation?.isValid}
+          >
+            Start Evaluation
+          </Button>
+        </Box>
+
+        {/* Validation Results */}
+        {promptValidation && (
+          <Paper sx={{ p: 2, mt: 2, bgcolor: promptValidation.isValid ? 'success.light' : 'error.light' }}>
+            <Typography color={promptValidation.isValid ? 'success.dark' : 'error.dark'}>
+              {promptValidation.message}
+            </Typography>
+            {promptValidation.variables && (
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Detected variables: {promptValidation.variables.join(', ')}
+              </Typography>
+            )}
+          </Paper>
+        )}
+      </Box>
+    );
   };
 
   const renderErrorState = () => {
@@ -1234,7 +1673,7 @@ function App() {
 
   const renderContent = () => {
     if (isGenerating) {
-      return <LoadingState message={currentView === 'analyze' ? "Analyzing your prompt..." : "Comparing prompts..."} />;
+      return <LoadingState message={currentView === 'analyze' ? "Refining your prompt..." : "Processing..."} />;
     }
 
     if (error) {
@@ -1250,6 +1689,10 @@ function App() {
         return renderAnalysisHistoryView();
       case 'comparison-history':
         return renderComparisonHistoryView();
+      case 'prompt-comparison':
+        return renderPromptComparisonView();
+      case 'prompt-evaluation':
+        return renderPromptEvaluationView();
       default:
         return renderAnalysisContent();
     }
@@ -1267,7 +1710,27 @@ function App() {
             borderBottom: '1px solid rgba(0,0,0,0.12)',
           }}
         >
-          <Toolbar sx={{ minHeight: '64px !important' }}>
+          <Toolbar sx={{ 
+            minHeight: '64px !important',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+          }}>
+            <IconButton
+              onClick={() => setIsDrawerExpanded(!isDrawerExpanded)}
+              sx={{
+                color: 'primary.main',
+                border: '2px solid',
+                borderColor: 'primary.main',
+                '&:hover': {
+                  backgroundColor: 'primary.main',
+                  color: 'white',
+                },
+              }}
+              size="large"
+            >
+              {isDrawerExpanded ? <ChevronLeftIcon /> : <ChevronRightIcon />}
+            </IconButton>
             <Typography variant="h6" component="div" sx={{ flexGrow: 1, color: 'primary.main' }}>
               AI Prompt Enhancement
             </Typography>
@@ -1283,10 +1746,16 @@ function App() {
             p: { xs: 2, md: 4 },
             width: { sm: `calc(100% - ${drawerWidth}px)` },
             ml: { sm: `${drawerWidth}px` },
-            mt: '64px'
+            mt: '64px',
+            transition: 'margin-left 0.3s ease, width 0.3s ease',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
           }}
         >
-          {renderContent()}
+          <Container maxWidth="lg" sx={{ width: '100%' }}>
+            {renderContent()}
+          </Container>
         </Box>
       </Box>
     </ThemeProvider>

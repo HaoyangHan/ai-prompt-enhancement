@@ -1,0 +1,145 @@
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+import json
+from io import BytesIO
+
+pytestmark = pytest.mark.asyncio
+
+def create_test_csv():
+    """Create a test CSV file for batch evaluation."""
+    content = "prompt\nWrite a sorting function\nImplement binary search"
+    return BytesIO(content.encode())
+
+async def test_evaluate_prompt_success(client: TestClient, mock_evaluation_service):
+    """Test successful prompt evaluation."""
+    response = client.post(
+        "/api/v1/evaluation/evaluate",
+        json={
+            "prompt": "Write a function to sort an array",
+            "criteria": [
+                {
+                    "name": "clarity",
+                    "weight": 0.4,
+                    "description": "Measures clarity",
+                    "threshold": 0.7
+                },
+                {
+                    "name": "specificity",
+                    "weight": 0.6,
+                    "description": "Measures specificity",
+                    "threshold": 0.8
+                }
+            ],
+            "context": {"domain": "programming", "level": "intermediate"}
+        }
+    )
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert "overall_score" in data
+    assert "criteria_scores" in data
+    assert "feedback" in data
+    assert "passed_thresholds" in data
+    assert isinstance(data["overall_score"], float)
+    assert isinstance(data["criteria_scores"], dict)
+    assert isinstance(data["feedback"], list)
+    assert isinstance(data["passed_thresholds"], bool)
+
+async def test_evaluate_prompt_invalid_weights(client: TestClient):
+    """Test prompt evaluation with invalid weights."""
+    response = client.post(
+        "/api/v1/evaluation/evaluate",
+        json={
+            "prompt": "Write a sorting function",
+            "criteria": [
+                {
+                    "name": "clarity",
+                    "weight": 1.5,  # Invalid weight > 1
+                    "description": "Measures clarity",
+                    "threshold": 0.7
+                }
+            ]
+        }
+    )
+    
+    assert response.status_code == 422  # Validation error
+
+async def test_evaluate_prompt_missing_required(client: TestClient):
+    """Test prompt evaluation with missing required fields."""
+    response = client.post(
+        "/api/v1/evaluation/evaluate",
+        json={
+            "prompt": "Write a sorting function"
+            # Missing criteria
+        }
+    )
+    
+    assert response.status_code == 422  # Validation error
+
+async def test_evaluate_batch_success(client: TestClient, mock_evaluation_service):
+    """Test successful batch evaluation."""
+    csv_file = create_test_csv()
+    
+    response = client.post(
+        "/api/v1/evaluation/evaluate/batch",
+        files={"file": ("test.csv", csv_file, "text/csv")},
+        data={
+            "criteria": json.dumps([
+                {
+                    "name": "clarity",
+                    "weight": 0.4,
+                    "description": "Measures clarity",
+                    "threshold": 0.7
+                }
+            ])
+        }
+    )
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert "total_prompts" in data
+    assert "passed_prompts" in data
+    assert "average_score" in data
+    assert "results" in data
+    assert isinstance(data["total_prompts"], int)
+    assert isinstance(data["passed_prompts"], int)
+    assert isinstance(data["average_score"], float)
+    assert isinstance(data["results"], dict)
+
+async def test_evaluate_batch_invalid_file(client: TestClient):
+    """Test batch evaluation with invalid file."""
+    response = client.post(
+        "/api/v1/evaluation/evaluate/batch",
+        files={"file": ("test.txt", BytesIO(b"invalid content"), "text/plain")},
+        data={
+            "criteria": json.dumps([
+                {
+                    "name": "clarity",
+                    "weight": 0.4,
+                    "description": "Measures clarity",
+                    "threshold": 0.7
+                }
+            ])
+        }
+    )
+    
+    assert response.status_code == 400  # Bad request
+
+async def test_evaluate_batch_missing_file(client: TestClient):
+    """Test batch evaluation with missing file."""
+    response = client.post(
+        "/api/v1/evaluation/evaluate/batch",
+        data={
+            "criteria": json.dumps([
+                {
+                    "name": "clarity",
+                    "weight": 0.4,
+                    "description": "Measures clarity",
+                    "threshold": 0.7
+                }
+            ])
+        }
+    )
+    
+    assert response.status_code == 422  # Validation error 

@@ -1,8 +1,8 @@
 from openai import OpenAI
 from typing import List, Dict, Optional, Any, Union
 from loguru import logger
-from ..core.config import get_settings
-from .prompt_templates import ANALYSIS_TEMPLATE, COMPARISON_TEMPLATE
+from ...core.config import get_settings
+from ..prompt_refinement.prompt_templates import ANALYSIS_TEMPLATE, COMPARISON_TEMPLATE
 import json
 import ast
 import re
@@ -152,21 +152,23 @@ class DeepseekService:
             "model_used": self.settings.deepseek_model
         }
 
-    async def compare_prompts(self, analysis_result: Dict) -> Dict:
-        """Compare the original and enhanced prompts using the analysis result."""
+    async def compare_prompts(self, original_prompt: str, enhanced_prompt: str, context: Optional[Dict] = None) -> Dict:
+        """Compare original and enhanced prompts."""
         logger.info("Starting prompt comparison")
-        logger.debug(f"Raw analysis result:\n{json.dumps(analysis_result, indent=2)}")
+        logger.debug(f"Original prompt: {original_prompt}")
+        logger.debug(f"Enhanced prompt: {enhanced_prompt}")
+        logger.debug(f"Context: {context}")
         
-        # Validate input
-        if not isinstance(analysis_result, dict):
-            raise ValueError("Analysis result must be a dictionary")
-            
-        required_fields = ['metrics', 'suggestions', 'original_prompt', 'enhanced_prompt']
-        missing_fields = [field for field in required_fields if field not in analysis_result]
-        if missing_fields:
-            raise ValueError(f"Missing required fields: {missing_fields}")
-            
         try:
+            # Prepare the analysis result
+            analysis_result = {
+                "metrics": {},
+                "suggestions": [],
+                "original_prompt": original_prompt,
+                "enhanced_prompt": enhanced_prompt,
+                "context": context
+            }
+            
             # Clean the analysis result
             cleaned_result = self._clean_json(analysis_result)
             
@@ -197,7 +199,7 @@ class DeepseekService:
                 return self._create_error_response(
                     "API request failed",
                     ["Please check your network connection and API settings"],
-                    analysis_result.get("original_prompt", ""),
+                    original_prompt,
                     str(e)
                 )
             
@@ -233,6 +235,46 @@ class DeepseekService:
             return self._create_error_response(
                 "Comparison failed",
                 ["Please try again"],
-                analysis_result.get("original_prompt", ""),
+                original_prompt,
                 str(e)
             )
+
+    async def get_capabilities(self) -> List[Dict]:
+        """Get capabilities of the Deepseek model."""
+        logger.info("Getting model capabilities")
+        return [{
+            "name": self.settings.deepseek_model,
+            "version": "1.0.0",
+            "capabilities": ["prompt analysis", "code generation", "text completion"],
+            "max_tokens": 8192,
+            "supported_languages": ["en"]
+        }]
+
+    async def get_status(self) -> List[Dict]:
+        """Get current status of the Deepseek model."""
+        logger.info("Getting model status")
+        try:
+            # Make a simple API request to check if the model is responsive
+            response = self.client.chat.completions.create(
+                model=self.settings.deepseek_model,
+                messages=[{"role": "user", "content": "test"}],
+                stream=False,
+                temperature=0.7,
+                max_tokens=10
+            )
+            return [{
+                "name": self.settings.deepseek_model,
+                "status": "healthy",
+                "latency": 0.5,  # TODO: Calculate actual latency
+                "requests_per_minute": 100,  # TODO: Implement rate tracking
+                "error_rate": 0.1  # TODO: Track error rate
+            }]
+        except Exception as e:
+            logger.error(f"Error checking model status: {str(e)}")
+            return [{
+                "name": self.settings.deepseek_model,
+                "status": "error",
+                "latency": 0.5,  # Still provide a value for validation
+                "requests_per_minute": 0,
+                "error_rate": 1.0
+            }]
