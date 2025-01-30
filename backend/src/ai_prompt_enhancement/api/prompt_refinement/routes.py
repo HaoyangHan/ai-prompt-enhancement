@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Body
 from pydantic import BaseModel, Field
 from typing import Dict, Optional, List
 from loguru import logger
@@ -20,18 +20,15 @@ class AnalyzeRequest(BaseModel):
     Request model for prompt analysis.
     """
     prompt: str = Field(..., description="The prompt text to analyze", min_length=1)
-    context: Optional[Dict] = Field(None, description="Optional context for analysis")
-    metrics: Optional[List[str]] = Field(
-        None, 
-        description="Specific metrics to analyze. If not provided, all metrics will be analyzed."
-    )
+    model: str = Field(..., description="The model to use for analysis")
+    context: Optional[str] = Field(None, description="Optional context for analysis")
 
     class Config:
         schema_extra = {
             "example": {
                 "prompt": "Write a function to calculate fibonacci numbers",
-                "context": {"domain": "programming", "level": "intermediate"},
-                "metrics": ["clarity", "specificity", "completeness"]
+                "model": "deepseek-chat",
+                "context": "This is for a programming tutorial"
             }
         }
 
@@ -119,15 +116,15 @@ async def analyze_prompt(
         HTTPException: If analysis fails or input is invalid
     """
     try:
-        logger.info(f"Analyzing prompt: {request.prompt[:100]}...")
+        logger.info(f"Analyzing prompt with model {request.model}")
         result = await refinement_service.analyze_prompt(
             prompt=request.prompt,
-            context=request.context,
-            metrics=request.metrics
+            model=request.model,
+            context=request.context
         )
         return AnalyzeResponse(**result)
     except Exception as e:
-        logger.error(f"Error analyzing prompt: {str(e)}")
+        logger.error(f"Analysis failed: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to analyze prompt: {str(e)}"

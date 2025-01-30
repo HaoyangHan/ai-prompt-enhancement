@@ -6,6 +6,7 @@ class ModelType(str, Enum):
     DEEPSEEK_CHAT = "deepseek-chat"
     DEEPSEEK_REASONER = "deepseek-reasoner"
     GPT_4 = "gpt-4"
+    GPT_4O_MINI = "gpt-4o-mini"
     CLAUDE_3_SONNET = "claude-3-sonnet"
 
 class PromptPreferences(BaseModel):
@@ -41,7 +42,8 @@ class ComparisonMetrics(BaseModel):
 class PromptVersion(BaseModel):
     prompt: str = Field(..., description="The prompt text")
     metrics: Dict[str, ComparisonMetrics] = Field(..., description="Metrics for this version")
-    suggestions: List[str] = Field(..., description="Suggestions for this version")
+    suggestions: Optional[List[str]] = Field(default_factory=list, description="Suggestions for this version")
+    highlighted_prompt: Optional[str] = Field(None, description="Highlighted version of the prompt with HTML formatting")
 
 class PromptComparisonResponse(BaseModel):
     original_prompt: PromptVersion = Field(..., description="Original prompt details")

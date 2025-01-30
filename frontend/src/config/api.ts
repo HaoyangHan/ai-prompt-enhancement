@@ -2,7 +2,9 @@ import axios from 'axios';
 
 export enum ModelType {
   DEEPSEEK_CHAT = "deepseek-chat",
-  DEEPSEEK_REASONER = "deepseek-reasoner"
+  DEEPSEEK_REASONER = "deepseek-reasoner",
+  OPENAI_GPT4 = "gpt-4o-mini",
+  OPENAI_GPT35 = "gpt-3.5-turbo"
 }
 
 // Create axios instance with base configuration
@@ -54,24 +56,21 @@ export const analyzePrompt = async (
   context?: string
 ) => {
   try {
-    console.log('Analyzing prompt:', {
-      prompt_text: prompt,
-      context: context || null,
+    // Clean and format the prompt string
+    const cleanPrompt = prompt
+      .trim()
+      .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
+      .replace(/[\n\r]/g, ' '); // Replace newlines with spaces
+
+    // Send the request with proper JSON structure
+    const response = await api.post('/api/v1/prompts/analyze', {
+      prompt_text: cleanPrompt,
       preferences: {
+        model: model,
         style: "professional",
-        tone: "neutral",
-        model: model
-      }
-    });
-    
-    const response = await api.post('/api/v1/prompts/refinement/analyze', {
-      prompt_text: prompt,
-      context: context || null,
-      preferences: {
-        style: "professional",
-        tone: "neutral",
-        model: model
-      }
+        tone: "neutral"
+      },
+      context: context
     });
     return response.data;
   } catch (error) {
@@ -86,15 +85,14 @@ export const analyzePrompt = async (
 
 export const comparePrompts = async (analysisResult: any) => {
   try {
-    // Log the incoming analysis result
-    console.log('Raw analysis result:', JSON.stringify(analysisResult, null, 2));
-    
+    // Structure the request according to the backend's expectations
     const requestData = {
-      ...analysisResult,
-      preferences: {
+      original_prompt: analysisResult.original_prompt || "",
+      enhanced_prompt: analysisResult.enhanced_prompt || "",
+      context: {
+        model: ModelType.DEEPSEEK_CHAT,
         style: "professional",
-        tone: "neutral",
-        model: ModelType.DEEPSEEK_CHAT
+        tone: "neutral"
       }
     };
     

@@ -116,6 +116,25 @@ class BatchEvaluationResult(BaseModel):
             }
         }
 
+class EvaluationPromptResponse(BaseModel):
+    """Model for evaluation prompt response."""
+    id: str = Field(..., description="Unique identifier for the prompt")
+    name: str = Field(..., description="Name of the evaluation prompt")
+    description: str = Field(..., description="Description of what the prompt evaluates")
+    prompt: str = Field(..., description="The prompt template")
+    variables: List[str] = Field(..., description="List of variables used in the prompt")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "id": "sentiment",
+                "name": "Sentiment Analysis",
+                "description": "Evaluate the sentiment of text",
+                "prompt": "Analyze the sentiment of the following text: {text}",
+                "variables": ["text"]
+            }
+        }
+
 @router.post("/evaluate", response_model=EvaluationResult)
 async def evaluate_prompt(
     request: EvaluationRequest,
@@ -205,4 +224,27 @@ async def evaluate_prompts_batch(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to evaluate prompts batch: {str(e)}"
+        )
+
+@router.get("/prompts", response_model=List[EvaluationPromptResponse])
+async def get_evaluation_prompts(
+    evaluation_service: EvaluationService = Depends(lambda: EvaluationService())
+) -> List[EvaluationPromptResponse]:
+    """
+    Get all available evaluation prompts.
+
+    Returns:
+        List[EvaluationPromptResponse]: List of available evaluation prompts
+
+    Raises:
+        HTTPException: If retrieving prompts fails
+    """
+    try:
+        prompts = evaluation_service.get_all_prompts()
+        return [EvaluationPromptResponse(**prompt) for prompt in prompts]
+    except Exception as e:
+        logger.error(f"Error retrieving evaluation prompts: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to load evaluation prompts: {str(e)}"
         ) 

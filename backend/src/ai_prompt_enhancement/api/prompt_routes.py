@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from typing import List, Dict
+from typing import List, Dict, Union
 import logging
 
 from ..schemas.prompt import (
@@ -10,17 +10,18 @@ from ..schemas.prompt import (
 )
 from ..services.prompt_service import PromptService
 
-router = APIRouter(prefix="/api/v1/prompts", tags=["prompts"])
+router = APIRouter(prefix="/prompts", tags=["prompts"])
 
 logger = logging.getLogger(__name__)
 
 @router.post("/analyze", response_model=PromptAnalysisResponse)
 async def analyze_prompt(
-    request: PromptAnalyzeRequest,
+    request: Union[PromptAnalyzeRequest, Dict],
     prompt_service: PromptService = Depends()
 ) -> PromptAnalysisResponse:
     """
     Analyze a prompt for quality and provide improvement suggestions.
+    Accepts both structured PromptAnalyzeRequest and simplified dictionary format.
     """
     try:
         return await prompt_service.analyze_prompt(request)

@@ -1,0 +1,46 @@
+{
+  "timestamp": "2025-01-31T00:16:15.894935",
+  "metrics": {
+    "clarity": {
+      "score": 0.8,
+      "description": "The prompt is mostly clear but could use more specificity regarding the tone and style of the product description.",
+      "suggestions": [
+        "Specify the desired tone (e.g., casual, professional) and the target audience for better clarity."
+      ]
+    },
+    "structure": {
+      "score": 0.7,
+      "description": "The structure is logical, but it can be improved by clearly separating the sustainable features and unique selling points.",
+      "suggestions": [
+        "Use bullet points to list sustainable features and unique selling points distinctly."
+      ]
+    },
+    "examples": {
+      "score": 0.5,
+      "description": "There are no examples provided to illustrate the type of product description needed.",
+      "suggestions": [
+        "Include examples of eco-friendly product descriptions or templates for guidance."
+      ]
+    },
+    "formatting": {
+      "score": 0.6,
+      "description": "The prompt lacks clear formatting for readability.",
+      "suggestions": [
+        "Use headings or lists for better structure and readability."
+      ]
+    },
+    "output_spec": {
+      "score": 0.7,
+      "description": "Output specifications are implied but not explicitly stated.",
+      "suggestions": [
+        "Clearly state the desired length and format of the product description (e.g., 150-200 words)."
+      ]
+    }
+  },
+  "suggestions": [
+    "Overall, enhance clarity by specifying tone and audience, provide examples, and improve formatting for readability."
+  ],
+  "original_prompt": "Create a compelling product description for a new eco-friendly water bottle. Highlight its sustainable features and unique selling points.",
+  "enhanced_prompt": "Create a compelling product description for a new eco-friendly water bottle aimed at environmentally conscious consumers. The description should highlight the following:  \n\n- Sustainable Features:  \n  - [Feature 1]  \n  - [Feature 2]  \n  - [Feature 3]  \n\n- Unique Selling Points:  \n  - [USP 1]  \n  - [USP 2]  \n  - [USP 3]  \n\nEnsure the tone is [desired tone] and the length is between 150-200 words.",
+  "model_used": "gpt-4o-mini"
+}

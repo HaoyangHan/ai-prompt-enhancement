@@ -1,117 +1,77 @@
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Union
 from loguru import logger
 from .analyzers import analyze_prompt_metrics
 from .prompt_templates import ANALYSIS_TEMPLATE, COMPARISON_TEMPLATE
-from ...services.model.deepseek_service import DeepseekService
+from ..model.model_factory import ModelFactory
 from ...core.config import get_settings
+from ..core.storage_service import StorageService
+from fastapi import Depends
+import re
 
 class RefinementService:
-    def __init__(self):
-        """Initialize the refinement service."""
+    """Service for analyzing and refining prompts."""
+
+    def __init__(self, storage_service: StorageService = Depends()):
+        """Initialize the RefinementService."""
         self.settings = get_settings()
-        self.model_service = DeepseekService()
-    
-    async def analyze_prompt(self, prompt: str, context: Optional[Dict] = None, metrics: Optional[List[str]] = None) -> Dict:
-        """
-        Analyze and enhance a prompt.
+        self.model_factory = ModelFactory()
+        self.storage_service = storage_service
+        logger.info("RefinementService initialized")
+
+    def _clean_text(self, text: Optional[Union[str, Dict]]) -> Optional[str]:
+        """Clean and format text input."""
+        logger.debug(f"Cleaning text input: '{text}'")
+        logger.debug(f"Input type: {type(text)}")
         
-        Args:
-            prompt: The prompt to analyze
-            context: Optional context for the prompt
-            metrics: Optional list of specific metrics to analyze
-            
-        Returns:
-            Dict: Analysis results including metrics and suggestions
-        """
-        logger.info(f"Analyzing prompt")
-        logger.debug(f"Prompt: {prompt}")
-        logger.debug(f"Context: {context}")
-        logger.debug(f"Metrics: {metrics}")
-        
+        if text is None:
+            logger.debug("Input is None, returning None")
+            return None
+        if isinstance(text, dict):
+            logger.debug("Input is dict, converting to string")
+            return str(text)
+        cleaned = str(text).strip()
+        logger.debug(f"Cleaned text: '{cleaned}'")
+        return cleaned
+
+    async def analyze_prompt(self, prompt: str, model: str, context: Optional[str] = None) -> Dict:
+        """Analyze a prompt using the specified model."""
         try:
-            # Get raw analysis from model
-            raw_analysis = await self.model_service.analyze_prompt(prompt, context)
+            logger.info(f"Analyzing prompt using model: {model}")
             
-            # Process metrics
-            all_metrics = analyze_prompt_metrics(prompt, raw_analysis)
+            # Get appropriate model service
+            model_service = self.model_factory.create_model_service(model)
             
-            # Filter metrics if specific ones are requested
-            if metrics:
-                filtered_metrics = {k: v for k, v in all_metrics.items() if k in metrics}
-            else:
-                filtered_metrics = all_metrics
+            # Perform analysis
+            result = await model_service.analyze_prompt(prompt, context)
             
-            # Prepare response
-            response = {
-                "metrics": filtered_metrics,
-                "suggestions": raw_analysis.get("suggestions", []),
-                "enhanced_prompt": raw_analysis.get("enhanced_prompt", prompt),
-                "original_prompt": prompt
-            }
+            # Add model information and original prompt
+            result["model_used"] = model
+            result["original_prompt"] = prompt
             
-            logger.debug(f"Analysis response: {response}")
-            return response
+            # Save the analysis result
+            try:
+                self.storage_service.save_analysis_history(result)
+                logger.info("Successfully saved analysis to history")
+            except Exception as e:
+                logger.error(f"Failed to save analysis history: {str(e)}")
+            
+            return result
             
         except Exception as e:
-            logger.error(f"Error analyzing prompt: {str(e)}")
+            logger.error(f"Error in analyze_prompt: {str(e)}")
             raise
-    
+
     async def compare_prompts(self, original_prompt: str, enhanced_prompt: str, context: Optional[Dict] = None) -> Dict:
-        """
-        Compare original and enhanced prompts.
-        
-        Args:
-            original_prompt: The original prompt text
-            enhanced_prompt: The enhanced prompt text
-            context: Optional context for comparison
-            
-        Returns:
-            Dict: Comparison results
-        """
-        logger.info("Comparing prompts")
-        logger.debug(f"Original prompt: {original_prompt}")
-        logger.debug(f"Enhanced prompt: {enhanced_prompt}")
-        logger.debug(f"Context: {context}")
-        
+        """Compare original and enhanced prompts."""
         try:
-            # Get comparison from model
-            comparison = await self.model_service.compare_prompts(
-                original_prompt=original_prompt,
-                enhanced_prompt=enhanced_prompt,
-                context=context
-            )
+            logger.info("Starting prompt comparison")
             
-            # Process metrics for both versions
-            original_metrics = analyze_prompt_metrics(
-                original_prompt,
-                comparison.get("original_prompt", {})
-            )
-            enhanced_metrics = analyze_prompt_metrics(
-                enhanced_prompt,
-                comparison.get("enhanced_prompt", {})
-            )
+            # Use the model specified in context, or default to deepseek
+            model_name = context.get("model", "deepseek-chat") if context else "deepseek-chat"
+            model_service = self.model_factory.create_model_service(model_name)
             
-            # Calculate improvements
-            improvements = []
-            for metric in original_metrics:
-                if metric in enhanced_metrics:
-                    diff = enhanced_metrics[metric] - original_metrics[metric]
-                    if diff > 0:
-                        improvements.append(f"Improved {metric} by {diff:.2f}")
-            
-            # Prepare response
-            response = {
-                "comparison_metrics": {
-                    "original": original_metrics,
-                    "enhanced": enhanced_metrics
-                },
-                "improvements": improvements or ["No significant improvements found"],
-                "recommendation": "Use the enhanced version" if improvements else "Both versions are similar"
-            }
-            
-            logger.debug(f"Comparison response: {response}")
-            return response
+            return await model_service.compare_prompts(original_prompt, enhanced_prompt, context)
             
         except Exception as e:
-            logger.error(f"Error comparing prompts: {str(e)}")
+            logger.error(f"Error in compare_prompts: {str(e)}")
             raise 

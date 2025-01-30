@@ -1,0 +1,40 @@
+{
+  "timestamp": "2025-01-30T19:30:21.386920",
+  "original_prompt": {
+    "prompt": "Create a compelling product description for a new eco-friendly water bottle. Highlight its sustainable features and unique selling points.",
+    "metrics": {
+      "clarity": {
+        "score": 0.7,
+        "description": "The original prompt is clear in its request for a product description focusing on sustainability and unique selling points. However, it lacks specific details about the target audience, the nature of the sustainable features, and the tone or style of the description.",
+        "suggestions": [
+          "Specify the target audience to tailor the description more effectively.",
+          "Provide examples of sustainable features to include.",
+          "Indicate the desired tone or style of the product description."
+        ]
+      }
+    },
+    "suggestions": [
+      "Specify the target audience to tailor the description more effectively.",
+      "Provide examples of sustainable features to include.",
+      "Indicate the desired tone or style of the product description."
+    ]
+  },
+  "enhanced_prompt": {
+    "prompt": "Create a compelling product description for a new eco-friendly water bottle aimed at environmentally conscious consumers. Highlight its sustainable features, such as being made from 100% recycled materials, BPA-free, and produced using renewable energy. Emphasize unique selling points like its innovative design, durability, and contribution to reducing plastic waste. The description should be professional yet engaging, appealing to consumers who prioritize sustainability in their purchasing decisions.",
+    "metrics": {
+      "clarity": {
+        "score": 0.95,
+        "description": "The enhanced prompt significantly improves upon the original by specifying the target audience (environmentally conscious consumers), detailing the sustainable features (100% recycled materials, BPA-free, renewable energy production), and outlining unique selling points (innovative design, durability, contribution to reducing plastic waste). It also specifies the desired tone (professional yet engaging) and the importance of appealing to sustainability priorities in purchasing decisions.",
+        "suggestions": [
+          "Consider adding a call to action to further engage potential customers.",
+          "Mention any certifications or awards the product has received to build trust and credibility."
+        ]
+      }
+    },
+    "suggestions": [
+      "Consider adding a call to action to further engage potential customers.",
+      "Mention any certifications or awards the product has received to build trust and credibility."
+    ]
+  },
+  "model_used": "deepseek-chat"
+}
