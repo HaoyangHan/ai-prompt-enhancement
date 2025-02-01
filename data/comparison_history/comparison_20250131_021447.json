@@ -1,0 +1,90 @@
+{
+  "original_prompt": {
+    "prompt": "Create a compelling product description for a new eco-friendly water bottle. Highlight its sustainable features and unique selling points.",
+    "metrics": {
+      "clarity": {
+        "score": 0.7,
+        "description": "Evaluation of prompt clarity and specificity",
+        "suggestions": [
+          "Specify the target audience for the product description"
+        ]
+      },
+      "structure": {
+        "score": 0.6,
+        "description": "Assessment of reasoning flow and organization",
+        "suggestions": [
+          "Suggest a structure for the product description"
+        ]
+      },
+      "examples": {
+        "score": 0.5,
+        "description": "Quality and usefulness of examples",
+        "suggestions": [
+          "Provide examples of similar product descriptions"
+        ]
+      },
+      "formatting": {
+        "score": 0.5,
+        "description": "Markdown and presentation evaluation",
+        "suggestions": [
+          "Use bullet points for features for better readability"
+        ]
+      },
+      "output_spec": {
+        "score": 0.6,
+        "description": "Clarity of output specifications",
+        "suggestions": [
+          "Clarify the expected length of the product description"
+        ]
+      }
+    },
+    "suggestions": [
+      "Consider specifying the tone and style of the description"
+    ]
+  },
+  "enhanced_prompt": {
+    "prompt": "Create a compelling product description for a new eco-friendly water bottle targeting environmentally conscious consumers. The description should be 100-150 words long and written in a casual tone. Highlight the following sustainable features: \n- Made from recycled materials \n- BPA-free \n- Reusable and dishwasher safe \n\nAlso, emphasize unique selling points such as: \n- Lightweight design \n- Stylish appearance \n- Available in multiple colors \n\nEnsure the description includes an engaging introduction, a detailed list of features, and a persuasive conclusion.",
+    "metrics": {
+      "clarity": {
+        "score": 0.9,
+        "description": "Evaluation of prompt clarity and specificity",
+        "suggestions": [
+          "Clarity has been improved with more specific details"
+        ]
+      },
+      "structure": {
+        "score": 0.8,
+        "description": "Assessment of reasoning flow and organization",
+        "suggestions": [
+          "The flow has been reorganized for better logical progression"
+        ]
+      },
+      "examples": {
+        "score": 0.7,
+        "description": "Quality and usefulness of examples",
+        "suggestions": [
+          "More relevant examples have been added to illustrate the points"
+        ]
+      },
+      "formatting": {
+        "score": 0.7,
+        "description": "Markdown and presentation evaluation",
+        "suggestions": [
+          "Markdown formatting has been improved for better readability"
+        ]
+      },
+      "output_spec": {
+        "score": 0.9,
+        "description": "Clarity of output specifications",
+        "suggestions": [
+          "The expected output format has been clarified"
+        ]
+      }
+    },
+    "suggestions": [
+      "Overall improvement recommendations"
+    ],
+    "highlighted_prompt": "The enhanced prompt has <span style='color:green; font-weight:bold'>targeting environmentally conscious consumers</span> that was not present in the original prompt, such as [specific new elements]. Additionally, several parts of the original prompt have been <span style='color:purple; font-style:italic'>written in a casual tone</span> for better accuracy and refinement, including [specific improvements]. Overall, the enhanced prompt provides a clearer and more structured approach to the task."
+  },
+  "model_used": "gpt-4o-mini"
+}

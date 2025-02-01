@@ -1,0 +1,49 @@
+{
+  "metrics": {
+    "clarity": {
+      "score": 0.8,
+      "description": "The prompt is clear in its request for a product description focusing on eco-friendly features and unique selling points. However, it could benefit from more specific instructions on the tone, style, and length of the description.",
+      "suggestions": [
+        "Specify the desired tone (e.g., professional, casual) and length (e.g., 100-150 words) for the product description."
+      ]
+    },
+    "structure": {
+      "score": 0.9,
+      "description": "The structure is straightforward and effectively communicates the task. The prompt could be slightly improved by organizing the requirements into a bulleted list for better readability.",
+      "suggestions": [
+        "Organize the requirements into a bulleted list to enhance readability and ensure all points are easily identifiable."
+      ]
+    },
+    "examples": {
+      "score": 0.0,
+      "description": "No examples were provided in the original prompt.",
+      "suggestions": [
+        "Include an example product description to illustrate the expected output format and content."
+      ]
+    },
+    "formatting": {
+      "score": 0.7,
+      "description": "The prompt is in plain text without any formatting. Using markdown for headings and lists could improve readability.",
+      "suggestions": [
+        "Use markdown formatting for headings and lists to improve the prompt's readability."
+      ]
+    },
+    "output_spec": {
+      "score": 0.6,
+      "description": "The prompt lacks specific output specifications such as format, length, and structure. This could lead to varied interpretations of the task.",
+      "suggestions": [
+        "Specify the output format (e.g., paragraph, bullet points), length, and any required structure to guide the creation of the product description."
+      ]
+    }
+  },
+  "suggestions": [
+    "Enhance the prompt by specifying the tone, style, and length of the product description.",
+    "Include an example product description to set clear expectations for the output.",
+    "Use markdown formatting to improve the prompt's readability and organization.",
+    "Specify the output format, length, and structure to ensure consistency in responses."
+  ],
+  "original_prompt": "Create a compelling product description for a new eco-friendly water bottle. Highlight its sustainable features and unique selling points.",
+  "enhanced_prompt": "## Task\nCreate a compelling product description for a new eco-friendly water bottle. The description should be 100-150 words long, written in a professional tone, and highlight the bottle's sustainable features and unique selling points.\n\n## Requirements\n- **Tone**: Professional\n- **Length**: 100-150 words\n- **Focus**: Sustainable features and unique selling points\n\n## Example\nIntroducing the EcoHydrate Bottle, your sustainable choice for staying hydrated on the go. Made from 100% recycled materials, this bottle not only reduces plastic waste but also keeps your drinks at the perfect temperature for hours. Its innovative design features a leak-proof cap and a built-in filter, making it the ideal companion for both urban adventures and outdoor excursions. Choose EcoHydrate for a greener planet and a healthier lifestyle.\n\n## Output Format\n- **Format**: Paragraph\n- **Structure**: Introduction, features, benefits, conclusion",
+  "model_used": "deepseek-chat",
+  "timestamp": "2025-02-01T23:01:33.033399"
+}

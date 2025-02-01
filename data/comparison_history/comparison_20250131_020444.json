@@ -1,0 +1,87 @@
+{
+  "original_prompt": {
+    "prompt": "Summarize the key points from our quarterly review meeting, including project updates, challenges, and next steps. Keep it concise and actionable.",
+    "metrics": {
+      "clarity": {
+        "score": 0.7,
+        "description": "Evaluation of prompt clarity and specificity",
+        "suggestions": [
+          "Add more structure to improve clarity"
+        ]
+      },
+      "structure": {
+        "score": 0.6,
+        "description": "Assessment of reasoning flow and organization",
+        "suggestions": [
+          "Organize content into distinct sections"
+        ]
+      },
+      "examples": {
+        "score": 0.4,
+        "description": "Quality and usefulness of examples",
+        "suggestions": [
+          "Provide examples of expected outputs"
+        ]
+      },
+      "formatting": {
+        "score": 0.5,
+        "description": "Markdown and presentation evaluation",
+        "suggestions": [
+          "Consider using bullet points for clarity"
+        ]
+      },
+      "output_spec": {
+        "score": 0.5,
+        "description": "Clarity of output specifications",
+        "suggestions": [
+          "Specify the desired length of the summary"
+        ]
+      }
+    },
+    "suggestions": [
+      "Consider adding more detailed output specifications."
+    ]
+  },
+  "enhanced_prompt": {
+    "prompt": "Please provide a summary of the key points from our quarterly review meeting. The summary should include the following sections:\n- Project Updates\n- Challenges\n- Next Steps\n\nEach section should be concise and actionable, ideally formatted as bullet points. Aim for a total length of no more than 200 words.",
+    "metrics": {
+      "clarity": {
+        "score": 0.9,
+        "description": "Evaluation of prompt clarity and specificity",
+        "suggestions": [
+          "Clarity has been improved with more specific details"
+        ]
+      },
+      "structure": {
+        "score": 0.8,
+        "description": "Assessment of reasoning flow and organization",
+        "suggestions": [
+          "The flow has been reorganized for better logical progression"
+        ]
+      },
+      "examples": {
+        "score": 0.6,
+        "description": "Quality and usefulness of examples",
+        "suggestions": [
+          "More relevant examples have been added to illustrate the points"
+        ]
+      },
+      "formatting": {
+        "score": 0.7,
+        "description": "Markdown and presentation evaluation",
+        "suggestions": [
+          "Markdown formatting has been improved for better readability"
+        ]
+      },
+      "output_spec": {
+        "score": 0.8,
+        "description": "Clarity of output specifications",
+        "suggestions": [
+          "The expected output format has been clarified"
+        ]
+      }
+    },
+    "highlighted_prompt": "The enhanced prompt has <span style='color:green; font-weight:bold'>structured sections</span> that were not present in the original prompt, such as <span style='color:green; font-weight:bold'>the inclusion of bullet points</span> for better readability. Additionally, several parts of the original prompt have been <span style='color:purple; font-style:italic'>polished</span> for better accuracy and refinement, including <span style='color:purple; font-style:italic'>specifying a total length of no more than 200 words</span>. Overall, the enhanced prompt provides a clearer and more structured approach to the task."
+  },
+  "model_used": "gpt-4o-mini"
+}

@@ -4,6 +4,8 @@ from loguru import logger
 import sys
 
 from .api import router
+from .api.prompt_routes import tags_metadata as prompt_tags
+from .api.evaluation.routes import tags_metadata as evaluation_tags
 from .core.config import get_settings
 
 # Configure loguru
@@ -74,7 +76,15 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json"
+    openapi_url="/api/openapi.json",
+    openapi_tags=[
+        *prompt_tags,
+        *evaluation_tags,
+        {
+            "name": "health",
+            "description": "Health check endpoints to monitor API status"
+        }
+    ]
 )
 
 # Add CORS middleware

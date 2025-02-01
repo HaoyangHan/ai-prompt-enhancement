@@ -26,6 +26,43 @@ class OpenAIService:
         )
         logger.debug("OpenAI client initialized")
     
+    async def generate_content(self, template: str, reference_content: Optional[str] = None) -> str:
+        """Generate content using the OpenAI model."""
+        try:
+            logger.info("=== Starting content generation ===")
+            logger.info(f"Template: '{template}'")
+            if reference_content:
+                logger.info(f"Reference content: '{reference_content}'")
+            
+            messages = [
+                {
+                    "role": "system",
+                    "content": "You are a helpful assistant that generates high-quality content based on templates."
+                },
+                {"role": "user", "content": template}
+            ]
+            
+            if reference_content:
+                messages.append({
+                    "role": "user",
+                    "content": f"Use this as reference for style and format: {reference_content}"
+                })
+            
+            response = self.client.chat.completions.create(
+                model=self.settings.openai_model,
+                messages=messages,
+                temperature=0.7,
+                max_tokens=2000
+            )
+            
+            content = response.choices[0].message.content
+            logger.info("Successfully generated content")
+            return content
+            
+        except Exception as e:
+            logger.error(f"Error generating content: {str(e)}")
+            raise
+    
     @staticmethod
     def _clean_text(text: str) -> str:
         """Clean text by removing extra whitespace and normalizing newlines."""
@@ -297,4 +334,7 @@ class OpenAIService:
                 "comparison": "Error occurred during comparison"
             },
             "model_used": self.settings.openai_model
-        } 
+        }
+
+# Create and export a global instance
+openai_service = OpenAIService() 

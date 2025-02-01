@@ -43,6 +43,7 @@ import {
   ChevronRight as ChevronRightIcon,
   ChevronLeft as ChevronLeftIcon,
   Refresh as RefreshIcon,
+  DatasetOutlined as DatasetIcon,
 } from '@mui/icons-material';
 import { analyzePrompt, getAnalysisHistory, getComparisonHistory, ModelType } from './config/api';
 import ReactMarkdown from 'react-markdown';
@@ -64,6 +65,8 @@ import {
   Tooltip as RechartsTooltip,
 } from 'recharts';
 import AnalysisHistory from './components/AnalysisHistory';
+import SyntheticDataGenerator from './components/SyntheticDataGenerator';
+import SimilarContentGenerator from './components/SimilarContentGenerator';
 
 // Create a theme similar to Citi's style
 const theme = createTheme({
@@ -152,7 +155,15 @@ const getScoreColor = (score: number): string => {
 const formatScore = (score: number): string => `${Math.round(score * 100)}%`;
 
 // Define view types
-type ViewType = 'analyze' | 'compare' | 'analysis-history' | 'comparison-history' | 'prompt-comparison' | 'prompt-evaluation';
+type ViewType = 
+  | 'analyze' 
+  | 'compare' 
+  | 'analysis-history' 
+  | 'comparison-history' 
+  | 'prompt-comparison' 
+  | 'prompt-evaluation'
+  | 'synthetic-data'
+  | 'similar-data';
 
 interface Metric {
     score: number;
@@ -729,6 +740,51 @@ function App() {
                   opacity: isDrawerExpanded ? 1 : 0,
                   '& .MuiTypography-root': { 
                     fontWeight: currentView === 'prompt-evaluation' ? 600 : 400 
+                  } 
+                }}
+              />
+            )}
+          </ListItemButton>
+
+          {/* Data Generation Section */}
+          <ListItem sx={{ mb: 1, display: isDrawerExpanded ? 'block' : 'none' }}>
+            <Typography variant="subtitle1" color="primary" sx={{ fontWeight: 600 }}>
+              Data Generation
+            </Typography>
+          </ListItem>
+          <ListItemButton
+            selected={currentView === 'synthetic-data'}
+            onClick={() => setCurrentView('synthetic-data')}
+            sx={{
+              borderRadius: 1,
+              mb: 1,
+              minHeight: 48,
+              justifyContent: isDrawerExpanded ? 'initial' : 'center',
+              px: 2.5,
+              ml: isDrawerExpanded ? 2 : 0,
+              '&.Mui-selected': {
+                backgroundColor: 'primary.light',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'primary.light',
+                },
+              },
+            }}
+          >
+            <ListItemIcon sx={{
+              minWidth: 0,
+              mr: isDrawerExpanded ? 3 : 'auto',
+              justifyContent: 'center',
+            }}>
+              <DatasetIcon color={currentView === 'synthetic-data' ? 'secondary' : 'inherit'} />
+            </ListItemIcon>
+            {isDrawerExpanded && (
+              <ListItemText 
+                primary="Synthetic Data" 
+                sx={{ 
+                  opacity: isDrawerExpanded ? 1 : 0,
+                  '& .MuiTypography-root': { 
+                    fontWeight: currentView === 'synthetic-data' ? 600 : 400 
                   } 
                 }}
               />
@@ -1904,6 +1960,17 @@ function App() {
         return renderPromptComparisonView();
       case 'prompt-evaluation':
         return renderPromptEvaluationView();
+      case 'synthetic-data':
+        return <SyntheticDataGenerator />;
+      case 'similar-data':
+        return <SimilarContentGenerator 
+          referenceContent=""
+          baseTemplate=""
+          baseInstructions=""
+          model={model}
+          onBack={() => setCurrentView('synthetic-data')}
+          generationNumber={1}
+        />;
       default:
         return renderAnalysisContent();
     }

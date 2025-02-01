@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "clarity": {
+      "score": 0.8,
+      "description": "The prompt is relatively clear but could specify the desired tone and length of the product description.",
+      "suggestions": [
+        "Specify the tone (e.g., informative, persuasive) and length (e.g., 100-150 words) of the product description."
+      ]
+    },
+    "structure": {
+      "score": 0.7,
+      "description": "The structure is straightforward but lacks detailed guidance on how to highlight features.",
+      "suggestions": [
+        "Provide bullet points or a structured format for listing sustainable features and unique selling points."
+      ]
+    },
+    "examples": {
+      "score": 0.6,
+      "description": "No examples are provided, making it difficult to gauge the expected output format.",
+      "suggestions": [
+        "Include examples of product descriptions that effectively highlight sustainability and unique features."
+      ]
+    },
+    "formatting": {
+      "score": 0.5,
+      "description": "The prompt lacks formatting that would improve readability.",
+      "suggestions": [
+        "Use lists or bullet points to delineate features and selling points clearly."
+      ]
+    },
+    "output_spec": {
+      "score": 0.6,
+      "description": "Output specifications are vague.",
+      "suggestions": [
+        "Clarify that the output should be a written paragraph followed by a JSON summary of the features."
+      ]
+    }
+  },
+  "suggestions": [
+    "Overall, the prompt needs more specificity regarding tone, length, and the format of the output. Incorporating examples would also enhance understanding."
+  ],
+  "original_prompt": "Create a compelling product description for a new eco-friendly water bottle. Highlight its sustainable features and unique selling points.",
+  "enhanced_prompt": "Create a compelling product description (100-150 words) for a new eco-friendly water bottle. The description should be persuasive and highlight its sustainable features, such as [feature1], [feature2], and [feature3]. Also, emphasize unique selling points like [unique_selling_point1] and [unique_selling_point2]. Please provide a short JSON summary of the features and selling points after the description.",
+  "model_used": "gpt-4o-mini"
+}

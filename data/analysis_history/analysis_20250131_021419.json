@@ -1,0 +1,48 @@
+{
+  "metrics": {
+    "clarity": {
+      "score": 0.8,
+      "description": "The prompt is clear but can benefit from more specific details about the expected tone and audience.",
+      "suggestions": [
+        "Specify the target audience for the product description.",
+        "Indicate the desired tone (e.g., casual, professional)."
+      ]
+    },
+    "structure": {
+      "score": 0.9,
+      "description": "The prompt has a logical structure, but could enhance clarity by breaking down the requirements further.",
+      "suggestions": [
+        "List the sustainable features and unique selling points as bullet points."
+      ]
+    },
+    "examples": {
+      "score": 0.6,
+      "description": "No examples provided, which limits understanding of desired output.",
+      "suggestions": [
+        "Include 1-2 examples of product descriptions that meet the requirements."
+      ]
+    },
+    "formatting": {
+      "score": 0.7,
+      "description": "The prompt lacks formatting that could enhance readability.",
+      "suggestions": [
+        "Use bullet points for listing features and selling points.",
+        "Consider using headings for sections."
+      ]
+    },
+    "output_spec": {
+      "score": 0.5,
+      "description": "Output specifications are vague and need more detail on format and length.",
+      "suggestions": [
+        "Specify the length of the product description (e.g., 100-150 words).",
+        "Indicate if a specific structure is preferred (e.g., introduction, features, conclusion)."
+      ]
+    }
+  },
+  "suggestions": [
+    "Incorporate examples, improve formatting, and clarify output specifications for a stronger prompt."
+  ],
+  "original_prompt": "Create a compelling product description for a new eco-friendly water bottle. Highlight its sustainable features and unique selling points.",
+  "enhanced_prompt": "Create a compelling product description for a new eco-friendly water bottle targeting environmentally conscious consumers. The description should be 100-150 words long and written in a casual tone. Highlight the following sustainable features: \n- Made from recycled materials \n- BPA-free \n- Reusable and dishwasher safe \n\nAlso, emphasize unique selling points such as: \n- Lightweight design \n- Stylish appearance \n- Available in multiple colors \n\nEnsure the description includes an engaging introduction, a detailed list of features, and a persuasive conclusion.",
+  "model_used": "gpt-4o-mini"
+}
