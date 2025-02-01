@@ -1,21 +1,24 @@
 # Python
 __pycache__/
 *.py[cod]
+*$py.class
 *.so
-*.egg
-*.egg-info/
-dist/
+.Python
 build/
-eggs/
-parts/
-bin/
-var/
-sdist/
 develop-eggs/
-.installed.cfg
+dist/
+downloads/
+eggs/
+.eggs/
 lib/
 lib64/
-.pytest_cache/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
 # Virtual Environment
 .env
@@ -59,4 +62,14 @@ build/
 .env.production.local
 
 # Poetry
-poetry.lock 
+poetry.lock
+
+# Data and History
+data/analysis_history/
+data/comparison_history/
+backend/data/analysis_history.csv
+backend/data/comparison_history.csv
+
+# OS
+.DS_Store
+Thumbs.db

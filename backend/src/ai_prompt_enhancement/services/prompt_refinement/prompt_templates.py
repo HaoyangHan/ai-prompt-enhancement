@@ -173,7 +173,7 @@ You would receive something like this:
     "suggestions": ["Overall improvement recommendations"],
     "highlighted prompt": "The enhanced prompt has <span style='color:green; font-weight:bold'>innovative content</span> that was not present in the original prompt, such as [specific new elements]. Additionally, several parts of the original prompt have been <span style='color:purple; font-style:italic'>polished</span> for better accuracy and refinement, including [specific improvements]. Overall, the enhanced prompt provides a clearer and more structured approach to the task."
   }},
-  "model_used": "DeepSeek Coder"
+  "model_used": "DeepSeek Chat"
 }}
 # Task
 1. Generate identical metrics for enhanced prompt. 
@@ -182,7 +182,7 @@ You would receive something like this:
     Next is enhanced prompt, contains enhanced prompt, its metrics and a value called highlighted prompt.
 3. in the highlighted prompt, generate the text in html format. 
     Compares the original prompt and the enhanced prompt. 
-    The output should based on enhanced prompt. 
+    The output content should be identical on enhanced prompt apart from the highlighted contents. 
     For those contents that are innovative or not shown in original prompt, 
     highlight it using bold and green color in html. 
     For those contents that are polished which is either more accurate, or refined, 

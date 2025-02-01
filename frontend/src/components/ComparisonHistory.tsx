@@ -70,7 +70,16 @@ const ComparisonHistory: React.FC = () => {
     const fetchHistory = async () => {
       try {
         const data = await getComparisonHistory();
-        setHistory(data);
+        const formattedHistory = data.items.map(item => ({
+          original_prompt: { prompt: item.results[0]?.content || '' },
+          enhanced_prompt: { 
+            prompt: item.results[item.results.length - 1]?.content || '',
+            highlighted_prompt: item.results[item.results.length - 1]?.content
+          },
+          model_used: item.model,
+          timestamp: item.timestamp
+        }));
+        setHistory(formattedHistory);
       } catch (err) {
         setError('Failed to load comparison history');
         console.error('Error fetching comparison history:', err);

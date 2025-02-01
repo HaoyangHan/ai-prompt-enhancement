@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Container, 
   TextField, 
@@ -43,8 +43,12 @@ import {
   ChevronRight as ChevronRightIcon,
   ChevronLeft as ChevronLeftIcon,
   Refresh as RefreshIcon,
+  ContentCopy as ContentCopyIcon,
+  DataObject as DataObjectIcon,
+  Info as InfoIcon,
 } from '@mui/icons-material';
-import { analyzePrompt, getAnalysisHistory, getComparisonHistory, ModelType } from './config/api';
+import { getAnalysisHistory, getComparisonHistory } from './api/api';
+import { analyzePrompt, ModelType } from './config/api';
 import ReactMarkdown from 'react-markdown';
 import { format } from 'date-fns';
 import { 
@@ -64,6 +68,7 @@ import {
   Tooltip as RechartsTooltip,
 } from 'recharts';
 import AnalysisHistory from './components/AnalysisHistory';
+import SyntheticDataGenerator from './components/SyntheticDataGenerator';
 
 // Create a theme similar to Citi's style
 const theme = createTheme({
@@ -152,7 +157,7 @@ const getScoreColor = (score: number): string => {
 const formatScore = (score: number): string => `${Math.round(score * 100)}%`;
 
 // Define view types
-type ViewType = 'analyze' | 'compare' | 'analysis-history' | 'comparison-history' | 'prompt-comparison' | 'prompt-evaluation';
+type ViewType = 'analyze' | 'compare' | 'analysis-history' | 'comparison-history' | 'prompt-comparison' | 'prompt-evaluation' | 'synthetic-data';
 
 interface Metric {
     score: number;
@@ -176,6 +181,7 @@ interface ComparisonResult {
         highlighted_prompt: string;
     };
     model_used: string;
+    timestamp?: string;
 }
 
 interface MetricData {
@@ -189,6 +195,13 @@ interface TooltipContentProps {
     value: number;
     name: string;
   }>;
+}
+
+interface ChartMetric {
+  metric: string;
+  score?: number;
+  original?: number;
+  enhanced?: number;
 }
 
 interface EvaluationPrompt {
@@ -235,33 +248,67 @@ const LoadingState = ({ message }: { message: string }) => (
   </Box>
 );
 
+// Update history data interfaces
+interface SyntheticDataResult {
+  content: string;
+  score: number;
+}
+
+interface HistoryItem {
+  id: string;
+  timestamp: string;
+  type: 'synthetic' | 'comparison' | 'similar';
+  model: string;
+  template?: string;
+  instructions?: string | null;
+  batch_size?: number;
+  results: SyntheticDataResult[];
+  generation_time: number;
+  is_cached?: boolean;
+  cached_at?: string | null;
+  statistics: {
+    average_score: number;
+    min_score: number;
+    max_score: number;
+  };
+  reference_content?: string | null;
+  prompts?: string[];
+  raw_responses?: string[];
+}
+
+interface HistoryResponse {
+  items: HistoryItem[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+interface HistoryData {
+  analysis: HistoryItem[];
+  comparison: HistoryItem[];
+}
+
 function App() {
   const [prompt, setPrompt] = useState('');
-  const [analysis, setAnalysis] = useState<any>(null);
+  const [model, setModel] = useState<ModelType>(ModelType.DEEPSEEK_CHAT);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [model, setModel] = useState<ModelType>(ModelType.DEEPSEEK_CHAT);
-  const [showWarning, setShowWarning] = useState(false);
+  const [analysis, setAnalysis] = useState<any>(null);
+  const [comparison, setComparison] = useState<ComparisonResult | null>(null);
   const [currentView, setCurrentView] = useState<ViewType>('analyze');
-  const [comparison, setComparison] = useState<any>(null);
-  const [userInstruction, setUserInstruction] = useState('');
-  const [isDrawerExpanded, setIsDrawerExpanded] = useState(true);
-  const expandedDrawerWidth = 280;
-  const collapsedDrawerWidth = 65;
-  const drawerWidth = isDrawerExpanded ? expandedDrawerWidth : collapsedDrawerWidth;
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
+  const [historyData, setHistoryData] = useState<HistoryData>({ analysis: [], comparison: [] });
+  const [comparisonSessions, setComparisonSessions] = useState<{[key: string]: any}>({});
+  const [userInstruction, setUserInstruction] = useState('');
   const [analyzeStartTime, setAnalyzeStartTime] = useState<number | null>(null);
   const [analyzeEndTime, setAnalyzeEndTime] = useState<number | null>(null);
   const [compareStartTime, setCompareStartTime] = useState<number | null>(null);
   const [compareEndTime, setCompareEndTime] = useState<number | null>(null);
-  const [historyData, setHistoryData] = useState<{
-    analysis: any[];
-    comparison: any[];
-  }>({
-    analysis: [],
-    comparison: []
-  });
-  const [comparisonSessions, setComparisonSessions] = useState<{[key: string]: any}>({});
+  const [isDrawerExpanded, setIsDrawerExpanded] = useState(true);
+  const expandedDrawerWidth = 280;
+  const collapsedDrawerWidth = 65;
+  const drawerWidth = isDrawerExpanded ? expandedDrawerWidth : collapsedDrawerWidth;
   const [selectedPromptId, setSelectedPromptId] = useState<string>('');
   const [customPrompt, setCustomPrompt] = useState('');
   const [isCustomPrompt, setIsCustomPrompt] = useState(false);
@@ -274,6 +321,8 @@ function App() {
   } | null>(null);
   const [evaluationPrompts, setEvaluationPrompts] = useState<EvaluationPrompt[]>([]);
   const [promptFetchError, setPromptFetchError] = useState<string | null>(null);
+  const [comparisonPromptA, setComparisonPromptA] = useState('');
+  const [comparisonPromptB, setComparisonPromptB] = useState('');
 
   const handleModelChange = (newModel: ModelType) => {
     setModel(newModel);
@@ -436,34 +485,34 @@ function App() {
     try {
       console.log('Loading history...');
       const [analysisHistory, comparisonHistory] = await Promise.all([
-        getAnalysisHistory(),
-        getComparisonHistory()
+        getAnalysisHistory(),  // Remove parameters as they're optional
+        getComparisonHistory()  // Remove parameters as they're optional
       ]);
       
       console.log('Analysis history:', analysisHistory);
       console.log('Comparison history:', comparisonHistory);
       
-      // Update historyData first
+      // Update historyData with the items from paginated response
       setHistoryData({
-        analysis: analysisHistory || [],
-        comparison: comparisonHistory || []
+        analysis: analysisHistory.items || [],
+        comparison: comparisonHistory.items || []
       });
       
-      // Then update comparisonSessions if needed
-      if (comparisonHistory && comparisonHistory.length > 0) {
-        const sessionsObject = comparisonHistory.reduce((acc: any, comparison: any) => {
+      // Update comparisonSessions if needed
+      if (comparisonHistory.items && comparisonHistory.items.length > 0) {
+        const sessionsObject = comparisonHistory.items.reduce((acc: Record<string, HistoryItem>, comparison: HistoryItem) => {
           const timestamp = comparison.timestamp ? 
             new Date(comparison.timestamp).getTime() : 
             Date.now();
-          acc[timestamp] = comparison;
+          acc[timestamp.toString()] = comparison;
           return acc;
         }, {});
         setComparisonSessions(sessionsObject);
       }
       
       console.log('History loaded:', { 
-        analysisHistory, 
-        comparisonHistory, 
+        analysisHistory: analysisHistory.items, 
+        comparisonHistory: comparisonHistory.items, 
         historyDataUpdated: true 
       });
     } catch (error) {
@@ -735,6 +784,50 @@ function App() {
             )}
           </ListItemButton>
 
+          {/* Synthetic Data Section */}
+          <ListItem sx={{ mb: 1, mt: 2, display: isDrawerExpanded ? 'block' : 'none' }}>
+            <Typography variant="subtitle1" color="primary" sx={{ fontWeight: 600 }}>
+              Synthetic Data
+            </Typography>
+          </ListItem>
+          <ListItemButton
+            onClick={() => setCurrentView('synthetic-data')}
+            selected={currentView === 'synthetic-data'}
+            sx={{
+              borderRadius: 1,
+              mb: 1,
+              minHeight: 48,
+              justifyContent: isDrawerExpanded ? 'initial' : 'center',
+              px: 2.5,
+              '&.Mui-selected': {
+                backgroundColor: 'primary.light',
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: 'primary.light',
+                },
+              },
+            }}
+          >
+            <ListItemIcon sx={{
+              minWidth: 0,
+              mr: isDrawerExpanded ? 3 : 'auto',
+              justifyContent: 'center',
+            }}>
+              <DataObjectIcon color={currentView === 'synthetic-data' ? 'secondary' : 'inherit'} />
+            </ListItemIcon>
+            {isDrawerExpanded && (
+              <ListItemText 
+                primary="LLM Data Generation" 
+                sx={{ 
+                  opacity: isDrawerExpanded ? 1 : 0,
+                  '& .MuiTypography-root': { 
+                    fontWeight: currentView === 'synthetic-data' ? 600 : 400 
+                  } 
+                }}
+              />
+            )}
+          </ListItemButton>
+
           <Divider sx={{ my: 2, display: isDrawerExpanded ? 'block' : 'none' }} />
           
           <ListItem sx={{ mb: 1, display: isDrawerExpanded ? 'block' : 'none' }}>
@@ -848,19 +941,40 @@ function App() {
     
     return (
         <Box sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            {/* Header with actions */}
+            <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                mb: 3,
+                pb: 2,
+                borderBottom: '1px solid rgba(0, 0, 0, 0.12)'
+            }}>
                 <Typography variant="h5">
                     Advanced Analytics on Refined Prompt
                 </Typography>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleCompare}
-                    disabled={isGenerating}
-                    startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : null}
-                >
-                    Generate Again
-                </Button>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => navigator.clipboard.writeText(typedComparison.enhanced_prompt.prompt)}
+                        startIcon={<ContentCopyIcon />}
+                    >
+                        Copy Enhanced Prompt
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => {
+                            setComparisonPromptA(typedComparison.original_prompt.prompt);
+                            setComparisonPromptB(typedComparison.enhanced_prompt.prompt);
+                            setCurrentView('prompt-comparison');
+                        }}
+                        startIcon={<CompareIcon />}
+                    >
+                        Compare on Data
+                    </Button>
+                </Box>
             </Box>
             
             {/* Side by side comparison */}
@@ -873,6 +987,7 @@ function App() {
                             p: 3,
                             height: '100%',
                             backgroundColor: '#FFFFFF',
+                            position: 'relative'
                         }}
                     >
                         <Typography variant="h6" gutterBottom color="primary">
@@ -883,6 +998,7 @@ function App() {
                                 whiteSpace: 'pre-wrap',
                                 wordBreak: 'break-word',
                                 lineHeight: 1.6,
+                                mt: 2
                             }}
                         >
                             {typedComparison.original_prompt.prompt}
@@ -898,11 +1014,47 @@ function App() {
                             p: 3,
                             height: '100%',
                             backgroundColor: '#FFFFFF',
+                            position: 'relative'
                         }}
                     >
-                        <Typography variant="h6" gutterBottom color="primary">
-                            Highlighted Version
-                        </Typography>
+                        <Box sx={{ mb: 3 }}>
+                            <Typography variant="h6" gutterBottom color="primary">
+                                Enhanced Version with Highlights
+                            </Typography>
+                            <Box sx={{ 
+                                display: 'flex', 
+                                gap: 3, 
+                                p: 2,
+                                bgcolor: 'rgba(0, 0, 0, 0.02)',
+                                borderRadius: 1,
+                                border: '1px solid rgba(0, 0, 0, 0.08)'
+                            }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Box sx={{ 
+                                        width: 12, 
+                                        height: 12, 
+                                        bgcolor: '#00C851',
+                                        borderRadius: '50%',
+                                        opacity: 0.3
+                                    }} />
+                                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                                        New Content
+                                    </Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Box sx={{ 
+                                        width: 12, 
+                                        height: 12, 
+                                        bgcolor: '#9C27B0',
+                                        borderRadius: '50%',
+                                        opacity: 0.3
+                                    }} />
+                                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: 'text.secondary' }}>
+                                        Refined Content
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        </Box>
                         <div 
                             dangerouslySetInnerHTML={{ 
                                 __html: typedComparison.enhanced_prompt.highlighted_prompt 
@@ -918,121 +1070,162 @@ function App() {
                 </Grid>
             </Grid>
 
-            {/* Radar Chart */}
+            {/* Generate Again Button */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 4 }}>
+                <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleCompare}
+                    disabled={isGenerating}
+                    startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : <RefreshIcon />}
+                    sx={{ minWidth: 200 }}
+                >
+                    Generate Again
+                </Button>
+            </Box>
+
+            {/* Metrics Visualization */}
             <Paper sx={{ p: 2, mb: 4 }}>
-                <Typography variant="h6" gutterBottom>
-                    Metrics Visualization
-                </Typography>
-                <Box sx={{ width: '100%', height: 400 }}>
-                    <ResponsiveContainer>
-                        <RadarChart data={Object.entries(typedComparison.original_prompt.metrics).map(([key, originalMetric]) => {
-                            const enhancedMetric = typedComparison.enhanced_prompt.metrics[key];
-                            return {
-                                metric: key,
-                                original: originalMetric.score * 100,
-                                enhanced: enhancedMetric.score * 100,
-                            };
-                        })}>
-                            <PolarGrid />
-                            <PolarAngleAxis 
-                                dataKey="metric" 
-                                tick={{ fill: '#056DAE', fontSize: 14 }}
-                                style={{ textTransform: 'capitalize' }}
-                            />
-                            <PolarRadiusAxis 
-                                angle={90} 
-                                domain={[0, 100]} 
-                                tick={{ fill: '#666' }}
-                                tickFormatter={(value) => `${value}%`}
-                            />
-                            <Radar
-                                name="Original"
-                                dataKey="original"
-                                stroke="#ff4444"
-                                fill="#ff4444"
-                                fillOpacity={0.3}
-                            />
-                            <Radar
-                                name="Enhanced"
-                                dataKey="enhanced"
-                                stroke="#00C851"
-                                fill="#00C851"
-                                fillOpacity={0.3}
-                            />
-                            <Legend />
-                        </RadarChart>
-                    </ResponsiveContainer>
-                </Box>
+              <Typography variant="h6" gutterBottom>
+                Metrics Visualization
+              </Typography>
+              <Box sx={{ width: '100%', height: 400 }}>
+                <ResponsiveContainer>
+                  <BarChart
+                    data={Object.entries(typedComparison.original_prompt.metrics).map(([key, originalMetric]) => {
+                      const enhancedMetric = typedComparison.enhanced_prompt.metrics[key] as Metric;
+                      const originalMetricTyped = originalMetric as Metric;
+                      return {
+                        metric: key,
+                        original: originalMetricTyped.score * 100,
+                        enhanced: enhancedMetric.score * 100,
+                      } as ChartMetric;
+                    })}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="metric" 
+                      interval={0}
+                      tick={{ fill: '#666', fontSize: 14 }}
+                      angle={-45}
+                      textAnchor="end"
+                    />
+                    <YAxis
+                      domain={[0, 100]}
+                      tickFormatter={(value: number) => `${value}%`}
+                      label={{ value: 'Score (%)', angle: -90, position: 'insideLeft' }}
+                    />
+                    <RechartsTooltip />
+                    <Legend 
+                      verticalAlign="top"
+                      height={36}
+                    />
+                    <Bar
+                      dataKey="original"
+                      fill="#82ca9d"
+                      name="Original"
+                      animationDuration={1500}
+                    >
+                      <LabelList
+                        dataKey="original"
+                        position="top"
+                        formatter={(value: number) => `${value.toFixed(0)}%`}
+                        style={{ fontSize: '12px', fontWeight: 'bold' }}
+                      />
+                    </Bar>
+                    <Bar
+                      dataKey="enhanced"
+                      fill="#056DAE"
+                      name="Enhanced"
+                      animationDuration={1500}
+                    >
+                      <LabelList
+                        dataKey="enhanced"
+                        position="top"
+                        formatter={(value: number) => `${value.toFixed(0)}%`}
+                        style={{ fontSize: '12px', fontWeight: 'bold' }}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
             </Paper>
 
             {/* Metrics comparison table */}
-            <Typography variant="h6" gutterBottom>
-                Metrics Comparison
-            </Typography>
-            <TableContainer component={Paper}>
+            <Paper sx={{ p: 2, mb: 4 }}>
+              <Typography variant="h6" gutterBottom>
+                Detailed Metrics Comparison
+              </Typography>
+              <TableContainer>
                 <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Metric</TableCell>
-                            <TableCell align="center">Original Score</TableCell>
-                            <TableCell align="center">Enhanced Score</TableCell>
-                            <TableCell>Description</TableCell>
-                            <TableCell>Suggestions</TableCell>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Metric</TableCell>
+                      <TableCell align="center">Original Score</TableCell>
+                      <TableCell align="center">Enhanced Score</TableCell>
+                      <TableCell>Description</TableCell>
+                      <TableCell>Suggestions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {Object.entries(typedComparison.original_prompt.metrics).map(([key, originalMetric]) => {
+                      const enhancedMetric = typedComparison.enhanced_prompt.metrics[key] as Metric;
+                      const originalMetricTyped = originalMetric as Metric;
+                      const scoreImprovement = enhancedMetric.score - originalMetricTyped.score;
+                      
+                      return (
+                        <TableRow key={key}>
+                          <TableCell>{key}</TableCell>
+                          <TableCell align="center">
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Typography>{(originalMetricTyped.score * 100).toFixed(0)}%</Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell align="center">
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Typography>
+                                {(enhancedMetric.score * 100).toFixed(0)}%
+                                {scoreImprovement > 0 && (
+                                  <span style={{ color: 'green', marginLeft: '4px' }}>
+                                    (+{(scoreImprovement * 100).toFixed(0)}%)
+                                  </span>
+                                )}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>{enhancedMetric.description}</TableCell>
+                          <TableCell>
+                            <List dense>
+                              {enhancedMetric.suggestions.map((suggestion, index) => (
+                                <ListItem key={index}>
+                                  <Typography>• {suggestion}</Typography>
+                                </ListItem>
+                              ))}
+                            </List>
+                          </TableCell>
                         </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {Object.entries(typedComparison.original_prompt.metrics).map(([key, originalMetric]) => {
-                            const enhancedMetric = typedComparison.enhanced_prompt.metrics[key];
-                            const scoreImprovement = enhancedMetric.score - originalMetric.score;
-                            
-                            return (
-                                <TableRow key={key}>
-                                    <TableCell>{key}</TableCell>
-                                    <TableCell align="center">
-                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <Typography>{(originalMetric.score * 100).toFixed(0)}%</Typography>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <Typography>
-                                                {(enhancedMetric.score * 100).toFixed(0)}%
-                                                {scoreImprovement > 0 && (
-                                                    <span style={{ color: 'green', marginLeft: '4px' }}>
-                                                        (+{(scoreImprovement * 100).toFixed(0)}%)
-                                                    </span>
-                                                )}
-                                            </Typography>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell>{enhancedMetric.description}</TableCell>
-                                    <TableCell>
-                                        <List dense>
-                                            {enhancedMetric.suggestions.map((suggestion, index) => (
-                                                <ListItem key={index}>
-                                                    <Typography>• {suggestion}</Typography>
-                                                </ListItem>
-                                            ))}
-                                        </List>
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        })}
-                    </TableBody>
+                      );
+                    })}
+                  </TableBody>
                 </Table>
-            </TableContainer>
+              </TableContainer>
+            </Paper>
 
-            {/* Timing information */}
-            <Box sx={{ mt: 4, opacity: 0.7 }}>
-                <Typography variant="body2" color="textSecondary">
-                    Analysis Time: {analyzeStartTime && analyzeEndTime ? 
-                      `${((analyzeEndTime - analyzeStartTime) / 1000).toFixed(2)} seconds` : 
-                      'N/A'}
-                    {' | '}
-                    Comparison Time: {compareStartTime && compareEndTime ? 
-                      `${((compareEndTime - compareStartTime) / 1000).toFixed(2)} seconds` : 
-                      'N/A'}
-                </Typography>
+            {/* Bottom section with timing */}
+            <Box sx={{ 
+              mt: 4, 
+              pt: 3, 
+              borderTop: '1px solid rgba(0, 0, 0, 0.12)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <Typography variant="body2" color="text.secondary">
+                Comparison Time: {compareStartTime && compareEndTime ? 
+                  `${((compareEndTime - compareStartTime) / 1000).toFixed(2)} seconds` : 
+                  'N/A'}
+              </Typography>
             </Box>
         </Box>
     );
@@ -1041,13 +1234,106 @@ function App() {
   const renderAnalysisHistoryView = () => {
     return (
       <Box sx={{ width: '100%', p: 2 }}>
-        <AnalysisHistory 
-          history={historyData.analysis} 
-          onViewDetails={(item) => {
-            setAnalysis(item);
-            setCurrentView('analyze');
-          }}
-        />
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h5">
+            Analysis History {historyData?.analysis?.length ? `(${historyData.analysis.length} items)` : ''}
+          </Typography>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={loadHistory}
+            startIcon={<RefreshIcon />}
+          >
+            Refresh
+          </Button>
+        </Box>
+        
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Timestamp</TableCell>
+                <TableCell>Model</TableCell>
+                <TableCell>Results</TableCell>
+                <TableCell>Score</TableCell>
+                <TableCell>Generation Time</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {historyData?.analysis?.length ? (
+                historyData.analysis.map((item: HistoryItem) => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      {new Date(item.timestamp).toLocaleString()}
+                    </TableCell>
+                    <TableCell>{item.model}</TableCell>
+                    <TableCell>
+                      <Box sx={{ maxWidth: 300 }}>
+                        {item.results.map((result, idx) => (
+                          <Tooltip key={idx} title={result.content}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 1,
+                                WebkitBoxOrient: 'vertical',
+                              }}
+                            >
+                              {result.content}
+                            </Typography>
+                          </Tooltip>
+                        ))}
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography>
+                          {(item.statistics.average_score * 100).toFixed(0)}%
+                        </Typography>
+                        <Tooltip title={`Min: ${(item.statistics.min_score * 100).toFixed(0)}% | Max: ${(item.statistics.max_score * 100).toFixed(0)}%`}>
+                          <InfoIcon fontSize="small" color="action" />
+                        </Tooltip>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      {item.generation_time.toFixed(2)}s
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => {
+                          setAnalysis({
+                            ...item,
+                            original_prompt: item.results[0]?.content || '',
+                            enhanced_prompt: item.results[item.results.length - 1]?.content || '',
+                            model_used: item.model
+                          });
+                          setCurrentView('analyze');
+                        }}
+                      >
+                        View Details
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">
+                    <Box sx={{ py: 3 }}>
+                      <Typography color="text.secondary">
+                        No analysis history available yet.
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Box>
     );
   };
@@ -1057,36 +1343,43 @@ function App() {
     
     return (
       <Box sx={{ p: 3 }}>
-        <Typography variant="h5" gutterBottom>
-          Comparison History {historyData?.comparison?.length ? `(${historyData.comparison.length} items)` : ''}
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h5">
+            Comparison History {historyData?.comparison?.length ? `(${historyData.comparison.length} items)` : ''}
+          </Typography>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={loadHistory}
+            startIcon={<RefreshIcon />}
+          >
+            Refresh
+          </Button>
+        </Box>
+
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
                 <TableCell>Timestamp</TableCell>
+                <TableCell>Model</TableCell>
                 <TableCell>Original Prompt</TableCell>
                 <TableCell>Enhanced Prompt</TableCell>
-                <TableCell>Model</TableCell>
+                <TableCell>Score</TableCell>
                 <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {historyData?.comparison?.length ? (
-                historyData.comparison.map((item, index) => {
-                  // Safely access nested properties
-                  const originalPrompt = item?.original_prompt?.prompt || 
-                                      (typeof item?.original_prompt === 'string' ? item.original_prompt : null) || 
-                                      'N/A';
-                  const enhancedPrompt = item?.enhanced_prompt?.prompt || 
-                                      (typeof item?.enhanced_prompt === 'string' ? item.enhanced_prompt : null) || 
-                                      'N/A';
-                  const modelUsed = item?.model_used || 'Unknown Model';
-                  const timestamp = item?.timestamp ? new Date(item.timestamp).toLocaleString() : 'Unknown Time';
+                historyData.comparison.map((item: HistoryItem) => {
+                  const originalPrompt = item.results[0]?.content || 'N/A';
+                  const enhancedPrompt = item.results[item.results.length - 1]?.content || 'N/A';
+                  const averageScore = item.statistics.average_score;
 
                   return (
-                    <TableRow key={index}>
-                      <TableCell>{timestamp}</TableCell>
+                    <TableRow key={item.id}>
+                      <TableCell>{new Date(item.timestamp).toLocaleString()}</TableCell>
+                      <TableCell>{item.model}</TableCell>
                       <TableCell sx={{ 
                         maxWidth: 300,
                         '& .content': {
@@ -1119,13 +1412,35 @@ function App() {
                           </Typography>
                         </Tooltip>
                       </TableCell>
-                      <TableCell>{modelUsed}</TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography>
+                            {(averageScore * 100).toFixed(0)}%
+                          </Typography>
+                          <Tooltip title={`Min: ${(item.statistics.min_score * 100).toFixed(0)}% | Max: ${(item.statistics.max_score * 100).toFixed(0)}%`}>
+                            <InfoIcon fontSize="small" color="action" />
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
                       <TableCell>
                         <Button
                           size="small"
                           variant="outlined"
                           onClick={() => {
-                            setComparison(item);
+                            setComparison({
+                              original_prompt: {
+                                prompt: originalPrompt,
+                                metrics: {},
+                                suggestions: []
+                              },
+                              enhanced_prompt: {
+                                prompt: enhancedPrompt,
+                                metrics: {},
+                                suggestions: [],
+                                highlighted_prompt: enhancedPrompt
+                              },
+                              model_used: item.model
+                            });
                             setCurrentView('compare');
                           }}
                         >
@@ -1137,7 +1452,7 @@ function App() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} align="center">
+                  <TableCell colSpan={6} align="center">
                     <Box sx={{ py: 3 }}>
                       <Typography color="text.secondary">
                         No comparison history available yet.
@@ -1234,7 +1549,7 @@ function App() {
       return (
         <>
           <Typography variant="h1" gutterBottom align="center" sx={{ mb: 4 }}>
-            AI Prompt Enhancement
+              AI Prompt Enhancement
           </Typography>
           
           <Typography variant="body1" sx={{ mb: 4, color: 'text.secondary', textAlign: 'center' }}>
@@ -1334,39 +1649,50 @@ function App() {
         </Box>
 
         {/* Metrics Visualization */}
-        <Paper sx={{ p: 2, mb: 4, mt: 4 }}>
+        <Paper sx={{ p: 2, mb: 4 }}>
           <Typography variant="h6" gutterBottom>
             Metrics Visualization
           </Typography>
           <Box sx={{ width: '100%', height: 400 }}>
             <ResponsiveContainer>
-              <RadarChart 
-                data={Object.entries(analysis.metrics).map(([key, metric]: [string, any]): MetricData => ({
-                  metric: key,
-                  score: metric.score * 100
-                }))}
+              <BarChart
+                data={Object.entries(analysis.metrics).map(([key, metric]) => {
+                  const metricTyped = metric as Metric;
+                  return {
+                    metric: key,
+                    score: metricTyped.score * 100
+                  } as ChartMetric;
+                })}
+                margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
               >
-                <PolarGrid />
-                <PolarAngleAxis 
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
                   dataKey="metric" 
-                  tick={{ fill: '#056DAE', fontSize: 14 }}
+                  interval={0}
+                  tick={{ fill: '#666', fontSize: 14 }}
+                  angle={-45}
+                  textAnchor="end"
                 />
-                <PolarRadiusAxis 
-                  angle={90} 
-                  domain={[0, 100]} 
-                  tick={{ fill: '#666' }}
+                <YAxis
+                  domain={[0, 100]}
                   tickFormatter={(value: number) => `${value}%`}
+                  label={{ value: 'Score (%)', angle: -90, position: 'insideLeft' }}
                 />
-                <Radar
-                  name="Score"
-                  dataKey="score"
-                  stroke="#056DAE"
-                  fill="#056DAE"
-                  fillOpacity={0.3}
-                />
-                <Legend />
                 <RechartsTooltip />
-              </RadarChart>
+                <Bar
+                  dataKey="score"
+                  fill="#056DAE"
+                  name="Score"
+                  animationDuration={1500}
+                >
+                  <LabelList
+                    dataKey="score"
+                    position="top"
+                    formatter={(value: number) => `${value.toFixed(0)}%`}
+                    style={{ fill: '#056DAE', fontSize: '12px', fontWeight: 'bold' }}
+                  />
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </Box>
         </Paper>
@@ -1435,7 +1761,7 @@ function App() {
           </Box>
         )}
 
-        {/* Bottom section with actions */}
+        {/* Bottom section with actions and timing */}
         <Box sx={{ 
           mt: 4, 
           pt: 3, 
@@ -1444,9 +1770,13 @@ function App() {
           justifyContent: 'space-between',
           alignItems: 'center'
         }}>
-          <Typography variant="body2" color="text.secondary">
-            Analysis completed at {new Date().toLocaleTimeString()}
-          </Typography>
+          <Box>
+            <Typography variant="body2" color="text.secondary">
+              Analysis Time: {analyzeStartTime && analyzeEndTime ? 
+                `${((analyzeEndTime - analyzeStartTime) / 1000).toFixed(2)} seconds` : 
+                'N/A'}
+            </Typography>
+          </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
               variant="outlined"
@@ -1488,6 +1818,8 @@ function App() {
                 fullWidth
                 multiline
                 rows={4}
+                value={comparisonPromptA}
+                onChange={(e) => setComparisonPromptA(e.target.value)}
                 placeholder="Enter your first prompt here..."
                 variant="outlined"
               />
@@ -1502,6 +1834,8 @@ function App() {
                 fullWidth
                 multiline
                 rows={4}
+                value={comparisonPromptB}
+                onChange={(e) => setComparisonPromptB(e.target.value)}
                 placeholder="Enter your second prompt here..."
                 variant="outlined"
               />
@@ -1904,6 +2238,8 @@ function App() {
         return renderPromptComparisonView();
       case 'prompt-evaluation':
         return renderPromptEvaluationView();
+      case 'synthetic-data':
+        return <SyntheticDataGenerator />;
       default:
         return renderAnalysisContent();
     }

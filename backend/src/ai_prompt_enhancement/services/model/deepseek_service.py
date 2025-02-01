@@ -7,6 +7,7 @@ import json
 import ast
 import re
 from datetime import datetime
+import asyncio
 
 class DeepseekService:
     def __init__(self):
@@ -381,3 +382,23 @@ class DeepseekService:
                 "requests_per_minute": 0,
                 "error_rate": 1.0
             }]
+
+async def generate_deepseek_response(prompt: str) -> Union[List[str], str]:
+    """Generate a response using the DeepseekService."""
+    service = DeepseekService()
+    try:
+        # Run the synchronous Deepseek call in a thread pool
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: service.client.chat.completions.create(
+                model="deepseek-chat",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                max_tokens=2000
+            )
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        logger.error(f"Error generating Deepseek response: {str(e)}")
+        raise

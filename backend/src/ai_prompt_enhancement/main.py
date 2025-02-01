@@ -1,83 +1,42 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from loguru import logger
+import logging
 import sys
+from pathlib import Path
 
-from .api import router
-from .core.config import get_settings
+from .api import synthetic_data_routes
+from .core.config import settings
 
-# Configure loguru
-logger.remove()  # Remove default handler
-logger.add(
-    sys.stderr,
-    format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-    level="DEBUG"
+# Create logs directory if it doesn't exist
+Path("logs").mkdir(exist_ok=True)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,  # Set default level to INFO
+    format='%(asctime)s | %(levelname)-8s | %(name)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    handlers=[
+        logging.StreamHandler(sys.stderr),
+        logging.FileHandler('logs/api.log', encoding='utf-8')
+    ]
 )
-logger.add(
-    "logs/api.log",
-    rotation="500 MB",
-    retention="10 days",
-    level="DEBUG",
-    format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}"
-)
 
-settings = get_settings()
-logger.info(f"Starting application with settings: {settings.dict()}")
+# Set specific log levels for different modules
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("openai").setLevel(logging.WARNING)
+logging.getLogger("uvicorn").setLevel(logging.INFO)
 
+# Get logger for this module
+logger = logging.getLogger(__name__)
+
+# Create the FastAPI application
 app = FastAPI(
-    title="AI Prompt Enhancement API",
-    description="""
-    A comprehensive API for analyzing, refining, and evaluating AI prompts.
-    
-    ## Features
-    
-    ### Prompt Refinement
-    - Analyze prompts for quality metrics
-    - Get improvement suggestions
-    - Compare original and enhanced prompts
-    
-    ### Evaluation
-    - Pre-defined evaluation templates
-    - Custom evaluation criteria
-    - Batch evaluation with CSV data
-    
-    ### Model Management
-    - Multiple model support
-    - Model capability discovery
-    - Performance tracking
-    
-    ## Authentication
-    
-    Currently, the API uses API key authentication for model services.
-    Add your API keys in the configuration file or environment variables.
-    
-    ## Rate Limiting
-    
-    Basic rate limiting is implemented to prevent abuse:
-    - 100 requests per minute for analysis endpoints
-    - 50 requests per minute for comparison endpoints
-    
-    ## Error Handling
-    
-    The API uses standard HTTP status codes:
-    - 200: Success
-    - 400: Bad Request (invalid input)
-    - 401: Unauthorized (invalid API key)
-    - 404: Not Found
-    - 429: Too Many Requests
-    - 500: Internal Server Error
-    
-    ## Endpoints
-    
-    Detailed documentation for each endpoint is available below.
-    """,
-    version="1.0.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json"
+    title=settings.app_name,
+    debug=settings.debug
 )
 
-# Add CORS middleware
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -86,15 +45,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include all routes
-app.include_router(
-    router,
-    prefix="/api/v1",
-    responses={
-        404: {"description": "Not found"},
-        500: {"description": "Internal server error"}
-    }
-)
+# Initialize application
+logger.info("Starting application with settings: %s", settings.dict())
+
+# Include routers
+app.include_router(synthetic_data_routes.router, prefix=settings.api_prefix)
 
 @app.get("/health", tags=["health"])
 async def health_check():
