@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "clarity": {
+      "score": 0.8,
+      "description": "Evaluation of prompt clarity and specificity",
+      "suggestions": [
+        "Specify what constitutes 'full, rich content' for the Jira ticket."
+      ]
+    },
+    "structure": {
+      "score": 0.7,
+      "description": "Assessment of reasoning flow and organization",
+      "suggestions": [
+        "Provide a clearer sequence of information to include in the Jira ticket."
+      ]
+    },
+    "examples": {
+      "score": 0.5,
+      "description": "Quality and usefulness of examples",
+      "suggestions": [
+        "Include examples of completed Jira tickets or specific fields to fill out."
+      ]
+    },
+    "formatting": {
+      "score": 0.6,
+      "description": "Markdown and presentation evaluation",
+      "suggestions": [
+        "Use bullet points to list necessary components of the Jira ticket."
+      ]
+    },
+    "output_spec": {
+      "score": 0.9,
+      "description": "Clarity of output specifications",
+      "suggestions": [
+        "Ensure the JSON format is explicitly outlined with field descriptions."
+      ]
+    }
+  },
+  "suggestions": [
+    "Clarify the requirements for the Jira ticket and include examples for better understanding."
+  ],
+  "original_prompt": "As a project manager, I want to create jira ticket based on the user's real need. Please help me expand the input into a full, rich content jira ticket, return the necessary contributes in strict json format.",
+  "enhanced_prompt": "As a project manager, I want to create a Jira ticket that accurately reflects the user's needs. Please help me expand the following input into a comprehensive Jira ticket that includes the title, description, priority, and any relevant tags. Return the necessary components in strict JSON format, ensuring that each field is clearly defined. \n\n### Example Input: \n- User's need: [User's actual need goes here] \n\n### Expected Output: \n```json \n{ \n  \"title\": \"[Title of the Jira ticket]\", \n  \"description\": \"[Detailed description of the issue]\", \n  \"priority\": \"[Priority level]\", \n  \"tags\": [\"[tag1]\", \"[tag2]\"] \n} \n```",
+  "model_used": "gpt-4o-mini"
+}

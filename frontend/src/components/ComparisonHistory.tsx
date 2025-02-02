@@ -2,18 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Box, Typography, Paper, Divider, CircularProgress } from '@mui/material';
 import HighlightedAnalysis from './HighlightedAnalysis';
 import { getComparisonHistory } from '../config/api';
+import { ComparisonResult } from '../types/comparison';
 
-interface ComparisonHistoryItem {
-  original_prompt: {
-    prompt: string;
-  };
-  enhanced_prompt: {
-    prompt: string;
-    highlighted_prompt?: string;
-  };
-  model_used: string;
+type ComparisonHistoryItem = ComparisonResult & {
   timestamp?: string;
-}
+};
 
 const ComparisonHistoryItem: React.FC<{ comparison: ComparisonHistoryItem }> = ({ comparison }) => {
   return (

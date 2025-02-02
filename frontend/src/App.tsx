@@ -67,6 +67,7 @@ import {
 import AnalysisHistory from './components/AnalysisHistory';
 import SyntheticDataGenerator from './components/SyntheticDataGenerator';
 import SimilarContentGenerator from './components/SimilarContentGenerator';
+import AdvancedAnalytics from './components/AdvancedAnalytics';
 
 // Create a theme similar to Citi's style
 const theme = createTheme({
@@ -903,194 +904,87 @@ function App() {
     const typedComparison = comparison as ComparisonResult;
     
     return (
-        <Box sx={{ p: 3 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h5">
-                    Advanced Analytics on Refined Prompt
-                </Typography>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleCompare}
-                    disabled={isGenerating}
-                    startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : null}
-                >
-                    Generate Again
-                </Button>
-            </Box>
-            
-            {/* Side by side comparison */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-                {/* Original Prompt */}
-                <Grid item xs={6}>
-                    <Paper 
-                        elevation={1} 
-                        sx={{ 
-                            p: 3,
-                            height: '100%',
-                            backgroundColor: '#FFFFFF',
-                        }}
-                    >
-                        <Typography variant="h6" gutterBottom color="primary">
-                            Original Prompt
-                        </Typography>
-                        <Typography
-                            sx={{
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                                lineHeight: 1.6,
-                            }}
-                        >
-                            {typedComparison.original_prompt.prompt}
-                        </Typography>
-                    </Paper>
-                </Grid>
-
-                {/* Highlighted Version */}
-                <Grid item xs={6}>
-                    <Paper 
-                        elevation={1} 
-                        sx={{ 
-                            p: 3,
-                            height: '100%',
-                            backgroundColor: '#FFFFFF',
-                        }}
-                    >
-                        <Typography variant="h6" gutterBottom color="primary">
-                            Highlighted Version
-                        </Typography>
-                        <div 
-                            dangerouslySetInnerHTML={{ 
-                                __html: typedComparison.enhanced_prompt.highlighted_prompt 
-                            }}
-                            style={{
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                                lineHeight: 1.6,
-                            }}
-                            className="highlighted-content"
-                        />
-                    </Paper>
-                </Grid>
-            </Grid>
-
-            {/* Radar Chart */}
-            <Paper sx={{ p: 2, mb: 4 }}>
-                <Typography variant="h6" gutterBottom>
-                    Metrics Visualization
-                </Typography>
-                <Box sx={{ width: '100%', height: 400 }}>
-                    <ResponsiveContainer>
-                        <RadarChart data={Object.entries(typedComparison.original_prompt.metrics).map(([key, originalMetric]) => {
-                            const enhancedMetric = typedComparison.enhanced_prompt.metrics[key];
-                            return {
-                                metric: key,
-                                original: originalMetric.score * 100,
-                                enhanced: enhancedMetric.score * 100,
-                            };
-                        })}>
-                            <PolarGrid />
-                            <PolarAngleAxis 
-                                dataKey="metric" 
-                                tick={{ fill: '#056DAE', fontSize: 14 }}
-                                style={{ textTransform: 'capitalize' }}
-                            />
-                            <PolarRadiusAxis 
-                                angle={90} 
-                                domain={[0, 100]} 
-                                tick={{ fill: '#666' }}
-                                tickFormatter={(value) => `${value}%`}
-                            />
-                            <Radar
-                                name="Original"
-                                dataKey="original"
-                                stroke="#ff4444"
-                                fill="#ff4444"
-                                fillOpacity={0.3}
-                            />
-                            <Radar
-                                name="Enhanced"
-                                dataKey="enhanced"
-                                stroke="#00C851"
-                                fill="#00C851"
-                                fillOpacity={0.3}
-                            />
-                            <Legend />
-                        </RadarChart>
-                    </ResponsiveContainer>
-                </Box>
-            </Paper>
-
-            {/* Metrics comparison table */}
-            <Typography variant="h6" gutterBottom>
-                Metrics Comparison
-            </Typography>
-            <TableContainer component={Paper}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Metric</TableCell>
-                            <TableCell align="center">Original Score</TableCell>
-                            <TableCell align="center">Enhanced Score</TableCell>
-                            <TableCell>Description</TableCell>
-                            <TableCell>Suggestions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {Object.entries(typedComparison.original_prompt.metrics).map(([key, originalMetric]) => {
-                            const enhancedMetric = typedComparison.enhanced_prompt.metrics[key];
-                            const scoreImprovement = enhancedMetric.score - originalMetric.score;
-                            
-                            return (
-                                <TableRow key={key}>
-                                    <TableCell>{key}</TableCell>
-                                    <TableCell align="center">
-                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <Typography>{(originalMetric.score * 100).toFixed(0)}%</Typography>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <Typography>
-                                                {(enhancedMetric.score * 100).toFixed(0)}%
-                                                {scoreImprovement > 0 && (
-                                                    <span style={{ color: 'green', marginLeft: '4px' }}>
-                                                        (+{(scoreImprovement * 100).toFixed(0)}%)
-                                                    </span>
-                                                )}
-                                            </Typography>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell>{enhancedMetric.description}</TableCell>
-                                    <TableCell>
-                                        <List dense>
-                                            {enhancedMetric.suggestions.map((suggestion, index) => (
-                                                <ListItem key={index}>
-                                                    <Typography>• {suggestion}</Typography>
-                                                </ListItem>
-                                            ))}
-                                        </List>
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        })}
-                    </TableBody>
-                </Table>
-            </TableContainer>
-
-            {/* Timing information */}
-            <Box sx={{ mt: 4, opacity: 0.7 }}>
-                <Typography variant="body2" color="textSecondary">
-                    Analysis Time: {analyzeStartTime && analyzeEndTime ? 
-                      `${((analyzeEndTime - analyzeStartTime) / 1000).toFixed(2)} seconds` : 
-                      'N/A'}
-                    {' | '}
-                    Comparison Time: {compareStartTime && compareEndTime ? 
-                      `${((compareEndTime - compareStartTime) / 1000).toFixed(2)} seconds` : 
-                      'N/A'}
-                </Typography>
-            </Box>
+      <Box sx={{ p: 3 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h5">
+            Advanced Analytics on Refined Prompt
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleCompare}
+            disabled={isGenerating}
+            startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : null}
+          >
+            Generate Again
+          </Button>
         </Box>
+
+        {/* Advanced Analytics Component */}
+        <AdvancedAnalytics 
+          comparisonResult={typedComparison} 
+          onViewHistory={() => setCurrentView('comparison-history')}
+        />
+
+        {/* Metrics Table */}
+        <Paper sx={{ mt: 4, p: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            Quality Metrics Comparison
+          </Typography>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Metric</TableCell>
+                  <TableCell align="center">Original Score</TableCell>
+                  <TableCell align="center">Enhanced Score</TableCell>
+                  <TableCell>Description</TableCell>
+                  <TableCell>Suggestions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {Object.entries(typedComparison.original_prompt.metrics).map(([key, originalMetric]) => {
+                  const enhancedMetric = typedComparison.enhanced_prompt.metrics[key];
+                  const scoreImprovement = enhancedMetric.score - originalMetric.score;
+                  
+                  return (
+                    <TableRow key={key}>
+                      <TableCell>{key}</TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Typography>{(originalMetric.score * 100).toFixed(0)}%</Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Typography>
+                            {(enhancedMetric.score * 100).toFixed(0)}%
+                            {scoreImprovement > 0 && (
+                              <span style={{ color: 'green', marginLeft: '4px' }}>
+                                (+{(scoreImprovement * 100).toFixed(0)}%)
+                              </span>
+                            )}
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                      <TableCell>{enhancedMetric.description}</TableCell>
+                      <TableCell>
+                        <List dense>
+                          {enhancedMetric.suggestions.map((suggestion, index) => (
+                            <ListItem key={index}>
+                              <Typography>• {suggestion}</Typography>
+                            </ListItem>
+                          ))}
+                        </List>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      </Box>
     );
   };
 

@@ -1,0 +1,90 @@
+{
+  "original_prompt": {
+    "prompt": "Create a compelling product description for a new eco-friendly water bottle. Highlight its sustainable features and unique selling points.",
+    "metrics": {
+      "clarity": {
+        "score": 0.7,
+        "description": "Evaluation of prompt clarity and specificity",
+        "suggestions": [
+          "Add specific features and selling points to improve clarity"
+        ]
+      },
+      "structure": {
+        "score": 0.6,
+        "description": "Assessment of reasoning flow and organization",
+        "suggestions": [
+          "Provide a structure for the description to follow"
+        ]
+      },
+      "examples": {
+        "score": 0.4,
+        "description": "Quality and usefulness of examples",
+        "suggestions": [
+          "Include examples of features and selling points"
+        ]
+      },
+      "formatting": {
+        "score": 0.5,
+        "description": "Markdown and presentation evaluation",
+        "suggestions": [
+          "Use bullet points for clarity"
+        ]
+      },
+      "output_spec": {
+        "score": 0.5,
+        "description": "Clarity of output specifications",
+        "suggestions": [
+          "Specify the desired length of the description"
+        ]
+      }
+    },
+    "suggestions": [
+      "Consider providing specific examples and a structured format for the output"
+    ]
+  },
+  "enhanced_prompt": {
+    "prompt": "Create a compelling product description (100-150 words) for a new eco-friendly water bottle. The description should be persuasive and highlight its sustainable features, such as [feature1], [feature2], and [feature3]. Also, emphasize unique selling points like [unique_selling_point1] and [unique_selling_point2]. Please provide a short JSON summary of the features and selling points after the description.",
+    "highlighted_prompt": "Create a compelling product description (<span style='color:green; font-weight:bold'>100-150 words</span>) for a new eco-friendly water bottle. The description should be <span style='color:purple; font-style:italic'>persuasive</span> and highlight its sustainable features, such as <span style='color:green; font-weight:bold'>[feature1]</span>, <span style='color:green; font-weight:bold'>[feature2]</span>, and <span style='color:green; font-weight:bold'>[feature3]</span>. Also, emphasize unique selling points like <span style='color:green; font-weight:bold'>[unique_selling_point1]</span> and <span style='color:green; font-weight:bold'>[unique_selling_point2]</span>. Please provide a short <span style='color:purple; font-style:italic'>JSON summary</span> of the features and selling points after the description.",
+    "metrics": {
+      "clarity": {
+        "score": 0.9,
+        "description": "Evaluation of prompt clarity and specificity",
+        "suggestions": [
+          "Clarity has been improved with more specific details"
+        ]
+      },
+      "structure": {
+        "score": 0.8,
+        "description": "Assessment of reasoning flow and organization",
+        "suggestions": [
+          "The flow has been reorganized for better logical progression"
+        ]
+      },
+      "examples": {
+        "score": 0.7,
+        "description": "Quality and usefulness of examples",
+        "suggestions": [
+          "More relevant examples have been added to illustrate the points"
+        ]
+      },
+      "formatting": {
+        "score": 0.7,
+        "description": "Markdown and presentation evaluation",
+        "suggestions": [
+          "Markdown formatting has been improved for better readability"
+        ]
+      },
+      "output_spec": {
+        "score": 0.8,
+        "description": "Clarity of output specifications",
+        "suggestions": [
+          "The expected output format has been clarified"
+        ]
+      }
+    },
+    "suggestions": [
+      "Overall improvement recommendations"
+    ]
+  },
+  "model_used": "gpt-4o-mini"
+}

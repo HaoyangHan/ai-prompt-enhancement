@@ -142,7 +142,8 @@ You would receive something like this:
     "suggestions": ["Overall improvement recommendations"]
   }},
   "enhanced_prompt": {{
-    "prompt": "Complete enhanced version of the prompt",
+    "prompt": "Complete enhanced version of the prompt, which contains innovative content and polished content.",
+    "highlighted prompt": "Complete enhanced version of the prompt, which contains <span style='color:green; font-weight:bold'>innovative content</span> and <span style='color:purple; font-style:italic'>polished content</span>."
     "metrics": {{
       "clarity": {{
         "score": float(0-1),
@@ -171,7 +172,6 @@ You would receive something like this:
       }}
     }},
     "suggestions": ["Overall improvement recommendations"],
-    "highlighted prompt": "The enhanced prompt has <span style='color:green; font-weight:bold'>innovative content</span> that was not present in the original prompt, such as [specific new elements]. Additionally, several parts of the original prompt have been <span style='color:purple; font-style:italic'>polished</span> for better accuracy and refinement, including [specific improvements]. Overall, the enhanced prompt provides a clearer and more structured approach to the task."
   }},
   "model_used": "DeepSeek Coder"
 }}
@@ -179,7 +179,7 @@ You would receive something like this:
 1. Generate identical metrics for enhanced prompt. 
 2. For the output, generate a strict json contains 2 value, 
     first is original prompt, contains the original prompt, its metrics and suggestions. 
-    Next is enhanced prompt, contains enhanced prompt, its metrics and a value called highlighted prompt.
+    Next is enhanced prompt, contains enhanced prompt, highlighted prompt, its metrics and a value called highlighted prompt.
 3. in the highlighted prompt, generate the text in html format. 
     Compares the original prompt and the enhanced prompt. 
     The output should based on enhanced prompt. 

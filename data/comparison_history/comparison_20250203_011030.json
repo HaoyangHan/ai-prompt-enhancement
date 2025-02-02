@@ -1,0 +1,90 @@
+{
+  "original_prompt": {
+    "prompt": "As a project manager, I want to create jira ticket based on the user's real need. Please help me expand the input into a full, rich content jira ticket, return the necessary contributes in strict json format.",
+    "metrics": {
+      "clarity": {
+        "score": 0.5,
+        "description": "Evaluation of prompt clarity and specificity",
+        "suggestions": [
+          "Specify what 'user's real need' refers to"
+        ]
+      },
+      "structure": {
+        "score": 0.4,
+        "description": "Assessment of reasoning flow and organization",
+        "suggestions": [
+          "The prompt could benefit from clearer organization"
+        ]
+      },
+      "examples": {
+        "score": 0.3,
+        "description": "Quality and usefulness of examples",
+        "suggestions": [
+          "Provide an example of a user's need"
+        ]
+      },
+      "formatting": {
+        "score": 0.2,
+        "description": "Markdown and presentation evaluation",
+        "suggestions": [
+          "Add formatting for better readability"
+        ]
+      },
+      "output_spec": {
+        "score": 0.5,
+        "description": "Clarity of output specifications",
+        "suggestions": [
+          "Clarify what 'strict json format' means"
+        ]
+      }
+    },
+    "suggestions": [
+      "Overall improvement recommendations"
+    ]
+  },
+  "enhanced_prompt": {
+    "prompt": "As a project manager, I want to create a Jira ticket that accurately reflects the user's needs. Please help me expand the following input into a comprehensive Jira ticket that includes the title, description, priority, and any relevant tags. Return the necessary components in strict JSON format, ensuring that each field is clearly defined.",
+    "highlighted_prompt": "As a project manager, I want to create a Jira ticket that <span style='color:green; font-weight:bold'>accurately reflects</span> the user's needs. Please help me expand the following input into a <span style='color:green; font-weight:bold'>comprehensive Jira ticket</span> that includes the <span style='color:green; font-weight:bold'>title, description, priority, and any relevant tags</span>. Return the necessary components in strict JSON format, ensuring that each field is <span style='color:purple; font-style:italic'>clearly defined</span>.<br><br>### Example Input:<br>- User's need: [User's actual need goes here]<br><br>### Expected Output:<br>```json<br>{<br>  \"title\": \"[Title of the Jira ticket]\",<br>  \"description\": \"[Detailed description of the issue]\",<br>  \"priority\": \"[Priority level]\",<br>  \"tags\": [\"[tag1]\", \"[tag2]\"]<br>}<br>```",
+    "metrics": {
+      "clarity": {
+        "score": 0.9,
+        "description": "Evaluation of prompt clarity and specificity",
+        "suggestions": [
+          "Clarity has been improved with more specific details"
+        ]
+      },
+      "structure": {
+        "score": 0.8,
+        "description": "Assessment of reasoning flow and organization",
+        "suggestions": [
+          "The flow has been reorganized for better logical progression"
+        ]
+      },
+      "examples": {
+        "score": 0.7,
+        "description": "Quality and usefulness of examples",
+        "suggestions": [
+          "More relevant examples have been added to illustrate the points"
+        ]
+      },
+      "formatting": {
+        "score": 0.6,
+        "description": "Markdown and presentation evaluation",
+        "suggestions": [
+          "Markdown formatting has been improved for better readability"
+        ]
+      },
+      "output_spec": {
+        "score": 0.9,
+        "description": "Clarity of output specifications",
+        "suggestions": [
+          "The expected output format has been clarified"
+        ]
+      }
+    },
+    "suggestions": [
+      "Overall improvement recommendations"
+    ]
+  },
+  "model_used": "gpt-4o-mini"
+}
