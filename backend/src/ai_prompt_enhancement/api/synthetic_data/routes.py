@@ -5,6 +5,11 @@ import logging
 
 from ...services.synthetic_data import generator, history
 from ...schemas.synthetic_data import GenerationRecord
+from ...services.synthetic_data.history_service import history_service
+from ...schemas.synthetic_data_history import (
+    SyntheticDataHistoryEntry,
+    SyntheticDataHistorySession
+)
 
 logger = logging.getLogger(__name__)
 
@@ -14,18 +19,28 @@ class SyntheticDataRequest(BaseModel):
     template: str = Field(..., description="The template for data generation")
     model: str = Field("gpt-4", description="The model to use for generation")
     batch_size: int = Field(1, ge=1, description="Number of data points to generate")
+    additional_instructions: str = Field(..., description="Additional instructions for generation")
+    force_refresh: bool = Field(False, description="Force refresh for generation")
 
 class GenerateSimilarRequest(SyntheticDataRequest):
     reference_content: str = Field(..., description="The reference content to generate similar variations of")
+
+class UpdateTagsRequest(BaseModel):
+    tags: List[str] = Field(..., description="Updated list of tags")
+
+class UpdateNotesRequest(BaseModel):
+    notes: str = Field(..., description="Updated notes content")
 
 @router.post("/generate", response_model=GenerationRecord)
 async def generate_data(request: SyntheticDataRequest):
     """Generate synthetic data based on the provided template."""
     try:
-        result = generator.generate_synthetic_data(
+        result = await generator.generate_synthetic_data(
             template=request.template,
             model=request.model,
-            batch_size=request.batch_size
+            batch_size=request.batch_size,
+            additional_instructions=request.additional_instructions,
+            force_refresh=request.force_refresh
         )
         return result
     except Exception as e:
@@ -36,53 +51,71 @@ async def generate_data(request: SyntheticDataRequest):
 async def generate_similar_data(request: GenerateSimilarRequest):
     """Generate synthetic data similar to a reference example."""
     try:
-        result = generator.generate_synthetic_data(
+        result = await generator.generate_synthetic_data(
             template=request.template,
             model=request.model,
             batch_size=request.batch_size,
-            reference_content=request.reference_content
+            reference_content=request.reference_content,
+            additional_instructions=request.additional_instructions,
+            force_refresh=request.force_refresh
         )
         return result
     except Exception as e:
         logger.error(f"Error generating similar data: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/history", response_model=List[GenerationRecord])
+@router.get("/history", response_model=List[SyntheticDataHistoryEntry])
 async def get_history(
-    limit: Optional[int] = Query(100, description="Maximum number of records to return")
+    session_id: Optional[str] = None,
+    type: Optional[str] = None,
+    limit: int = 100
 ):
-    """Get generation history records."""
+    """Get synthetic data generation history."""
     try:
-        records = history.get_records(limit=limit)
-        return records
+        return history_service.get_entries(session_id=session_id, type=type, limit=limit)
     except Exception as e:
-        logger.error(f"Error getting history: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/history/{record_id}")
-async def delete_history_record(record_id: str):
-    """Delete a specific history record."""
+@router.get("/history/sessions", response_model=List[SyntheticDataHistorySession])
+async def get_sessions(limit: int = 100):
+    """Get synthetic data generation sessions."""
     try:
-        logger.info(f"[HISTORY] Attempting to delete record: {record_id}")
-        if history.delete_record(record_id):
-            logger.info(f"[HISTORY] Successfully deleted record: {record_id}")
-            return {"status": "success", "message": f"Record {record_id} deleted"}
-        logger.warning(f"[HISTORY] Record not found: {record_id}")
-        raise HTTPException(status_code=404, detail=f"Record {record_id} not found")
+        return history_service.get_sessions(limit=limit)
     except Exception as e:
-        logger.error(f"[HISTORY] Error deleting history record: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/history")
-async def clear_history():
-    """Clear all history records."""
+@router.delete("/history/{entry_id}")
+async def delete_history_entry(entry_id: str):
+    """Delete a history entry."""
     try:
-        logger.info("[HISTORY] Attempting to clear all history records")
-        if history.clear_history():
-            logger.info("[HISTORY] Successfully cleared all history records")
-            return {"status": "success", "message": "History cleared"}
-        logger.error("[HISTORY] Failed to clear history")
-        raise HTTPException(status_code=500, detail="Failed to clear history")
+        history_service.delete_entry(entry_id)
+        return {"message": "Entry deleted successfully"}
     except Exception as e:
-        logger.error(f"[HISTORY] Error clearing history: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/history/sessions/{session_id}")
+async def delete_session(session_id: str):
+    """Delete a session."""
+    try:
+        history_service.delete_session(session_id)
+        return {"message": "Session deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/history/{entry_id}/tags")
+async def update_entry_tags(entry_id: str, request: UpdateTagsRequest):
+    """Update tags for a history entry."""
+    try:
+        history_service.update_entry_tags(entry_id, request.tags)
+        return {"message": "Tags updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/history/{entry_id}/notes")
+async def update_entry_notes(entry_id: str, request: UpdateNotesRequest):
+    """Update notes for a history entry."""
+    try:
+        history_service.update_entry_notes(entry_id, request.notes)
+        return {"message": "Notes updated successfully"}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) 

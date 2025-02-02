@@ -63,6 +63,7 @@ import { ModelType } from '../config/api';
 import CircularProgress from '@mui/material/CircularProgress';
 import SimilarContentGenerator from './SimilarContentGenerator';
 import HistoryView from './History/HistoryView';
+import SyntheticDataHistory from './History/SyntheticDataHistory';
 
 const SAMPLE_DATA = [
   {
@@ -104,6 +105,58 @@ interface LocalGenerationRecord {
   instructions?: string;
 }
 
+// Add these styles at the top of the component
+const styles = {
+  sectionTitle: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    fontWeight: 600,
+    fontSize: '1.5rem',
+    letterSpacing: '-0.01em',
+    color: 'primary.main',
+    mb: 3
+  },
+  sectionSubtitle: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    fontWeight: 500,
+    fontSize: '1.1rem',
+    letterSpacing: '-0.01em',
+    color: 'text.primary',
+    mb: 2,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1
+  },
+  headerContainer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    mb: 4,
+    borderBottom: 1,
+    borderColor: 'divider',
+    pb: 2
+  },
+  viewToggleButton: {
+    minWidth: 140,
+    fontWeight: 500,
+    textTransform: 'none',
+    px: 3
+  },
+  textInput: {
+    '& .MuiInputBase-root': {
+      fontFamily: '"JetBrains Mono", "Fira Code", "Consolas", monospace',
+      fontSize: '0.9rem',
+      letterSpacing: '-0.01em',
+      lineHeight: 1.6,
+      '& textarea': {
+        padding: '12px 14px',
+      }
+    },
+    '& .MuiInputBase-multiline': {
+      padding: 0
+    }
+  }
+};
+
 const SyntheticDataGenerator: React.FC = () => {
   const theme = useTheme();
   const [sampleData, setSampleData] = useState('');
@@ -129,13 +182,27 @@ const SyntheticDataGenerator: React.FC = () => {
   const [showStatsDialog, setShowStatsDialog] = useState(false);
   const [expandedSampleBox, setExpandedSampleBox] = useState(false);
   const [expandedInstructionsBox, setExpandedInstructionsBox] = useState(false);
+  const [showGenerationView, setShowGenerationView] = useState(true);
+
+  // Remove the useEffect debug logging that's causing infinite renders
+  useEffect(() => {
+    if (generatedData) {
+      // Only log once when data is initially set
+      const logData = generatedData.map((item, index) => ({
+        index,
+        content: item.content?.substring(0, 50) + '...',
+        score: item.score
+      }));
+      console.log('Generated Data Summary:', logData);
+    }
+  }, [generatedData]);
 
   const handleModelChange = (newModel: ModelType) => {
     setModel(newModel);
     setShowWarning(newModel !== ModelType.DEEPSEEK_CHAT);
   };
 
-  const addToHistory = (data: any[], type: 'synthetic' | 'similar', referenceContent?: string) => {
+  const addToHistory = (data: any[], type: 'synthetic' | 'similar', referenceContent?: string, metadata?: any) => {
     const record: LocalGenerationRecord = {
       id: Date.now().toString(),
       timestamp: new Date().toISOString(),
@@ -176,6 +243,8 @@ const SyntheticDataGenerator: React.FC = () => {
       setIsGenerating(true);
       setGeneratedData(null);
       setSelectedItems(new Set());
+      // Clear cached selections when starting a new generation
+      setCachedSelections({});
     }
     setError(null);
 
@@ -192,7 +261,7 @@ const SyntheticDataGenerator: React.FC = () => {
           additional_instructions: additionalInstructions,
           batch_size: batchSize,
           model: model,
-          force_refresh: true // Always force refresh when generating
+          force_refresh: forceRefresh
         }),
       });
 
@@ -202,21 +271,41 @@ const SyntheticDataGenerator: React.FC = () => {
       }
 
       const result = await response.json();
-      
-      // Ensure consistent format for display
-      const formattedData = result.generated_data.map((item: any) => ({
-        content: item.content || '',
-        score: typeof item.score === 'number' ? item.score : 0
-      }));
-      
+      console.log('API Response:', result);
+
+      // Process the data array from the response
+      const formattedData = result.data.map((item: any, index: number) => {
+        // Each item should already have content and score from the backend
+        return {
+          content: item.content || '',
+          score: typeof item.score === 'number' ? item.score : 0,
+          index: index,
+          timestamp: item.timestamp || new Date().toISOString()
+        };
+      });
+
       setGeneratedData(formattedData);
       
       // Add to history
-      addToHistory(formattedData, 'synthetic');
-      
+      addToHistory(formattedData, 'synthetic', undefined, {
+        generation_time: result.generation_time,
+        is_cached: result.is_cached,
+        cached_at: result.cached_at
+      });
+
       // Show cache status if result is from cache
-      if (result.is_cached) {
-        setError(`Using cached result from ${new Date(result.cached_at).toLocaleString()}`);
+      if (result.is_cached && result.cached_at) {
+        const cacheDate = new Date(result.cached_at);
+        const formattedDate = new Intl.DateTimeFormat('default', {
+          dateStyle: 'medium',
+          timeStyle: 'medium'
+        }).format(cacheDate);
+        setError(`Using cached result from ${formattedDate}`);
+      }
+
+      setPage(0);
+      if (!result.is_cached) {
+        setCachedSelections({});
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate data');
@@ -308,36 +397,39 @@ const SyntheticDataGenerator: React.FC = () => {
     return csvRows.join('\n');
   };
 
-  // Cache key generation function
+  // Cache key generation function - updated to be more reliable
   const generateCacheKey = (data: any[]) => {
-    return JSON.stringify(data.map(item => 
-      typeof item === 'string' ? item : item.content
-    ));
+    if (!data || data.length === 0) return '';
+    return data.map(item => item.content || '').join('|');
   };
 
   // Load cached selections when data changes
   useEffect(() => {
     if (generatedData) {
       const cacheKey = generateCacheKey(generatedData);
-      const cached = cachedSelections[cacheKey];
-      if (cached) {
-        setSelectedItems(cached);
-      } else {
-        setSelectedItems(new Set());
+      if (cacheKey) {
+        const cached = cachedSelections[cacheKey];
+        if (cached) {
+          setSelectedItems(cached);
+        } else {
+          setSelectedItems(new Set());
+        }
       }
     }
-  }, [generatedData]);
+  }, [generatedData, cachedSelections]);
 
   // Update cache when selections change
   useEffect(() => {
     if (generatedData) {
       const cacheKey = generateCacheKey(generatedData);
-      setCachedSelections(prev => ({
-        ...prev,
-        [cacheKey]: selectedItems
-      }));
+      if (cacheKey) {
+        setCachedSelections(prev => ({
+          ...prev,
+          [cacheKey]: selectedItems
+        }));
+      }
     }
-  }, [selectedItems]);
+  }, [selectedItems, generatedData]);
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -419,453 +511,540 @@ const SyntheticDataGenerator: React.FC = () => {
   return (
     <Box sx={{ p: 2 }}>
       <Paper sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Typography variant="h5" color="primary">
-            LLM Data Generation
+        <Box sx={styles.headerContainer}>
+          <Typography sx={styles.sectionTitle}>
+            Synthetic Data Generation
           </Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <IconButton onClick={() => setShowSamples(!showSamples)} size="small">
-              {showSamples ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-            </IconButton>
-          </Box>
-        </Box>
-
-        {/* Model Selection */}
-        <Box sx={{ mb: 4 }}>
-          <FormControl fullWidth>
-            <InputLabel id="model-select-label">Model</InputLabel>
-            <Select
-              labelId="model-select-label"
-              value={model}
-              label="Model"
-              onChange={(e) => handleModelChange(e.target.value as ModelType)}
-            >
-              <MenuItem value={ModelType.DEEPSEEK_CHAT}>Deepseek Chat</MenuItem>
-              <MenuItem value={ModelType.OPENAI_GPT4}>OpenAI GPT-4</MenuItem>
-              <MenuItem value={ModelType.OPENAI_GPT35}>OpenAI GPT-3.5 Turbo</MenuItem>
-            </Select>
-          </FormControl>
-
-          {showWarning && (
-            <Alert severity="warning" sx={{ mt: 2 }}>
-              Some features may be limited with non-Deepseek models.
-            </Alert>
-          )}
-        </Box>
-
-        {/* Sample Templates Section */}
-        <Collapse in={showSamples}>
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              Sample Templates
-              <Tooltip title="Click on any template to use it as a starting point">
-                <InfoIcon fontSize="small" color="action" />
-              </Tooltip>
-            </Typography>
-            <Stack direction="row" spacing={2} sx={{ overflowX: 'auto', pb: 2 }}>
-              {SAMPLE_DATA.map((sample, index) => (
-                <Card 
-                  key={index}
-                  sx={{ 
-                    minWidth: 300,
-                    cursor: 'pointer',
-                    '&:hover': { transform: 'translateY(-2px)', boxShadow: 3 },
-                    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                  }}
-                  onClick={() => handleSampleClick(sample)}
-                >
-                  <CardContent>
-                    <Typography variant="h6" gutterBottom>
-                      {sample.title}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ 
-                      height: '80px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 4,
-                      WebkitBoxOrient: 'vertical',
-                    }}>
-                      {sample.template}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              ))}
-            </Stack>
-          </Box>
-          <Divider sx={{ mb: 4 }} />
-        </Collapse>
-
-        {/* Main Input Section */}
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              Data Sample
-              <Tooltip title="Use {variable_name} for dynamic values">
-                <InfoIcon fontSize="small" color="action" />
-              </Tooltip>
-            </Typography>
-            <IconButton 
-              onClick={() => setExpandedSampleBox(!expandedSampleBox)} 
-              size="small"
-            >
-              {expandedSampleBox ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-            </IconButton>
-          </Box>
-          <TextField
-            fullWidth
-            multiline
-            rows={expandedSampleBox ? 8 : 4}
-            value={sampleData}
-            onChange={(e) => setSampleData(e.target.value)}
-            placeholder="Enter your data sample here..."
-            variant="outlined"
-            sx={{
-              transition: 'all 0.3s ease',
-              '& .MuiInputBase-root': {
-                fontFamily: 'monospace',
-              }
-            }}
-          />
-        </Box>
-
-        {/* Writing Style Instructions */}
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="subtitle1" gutterBottom>
-              Writing Style
-            </Typography>
-            <IconButton 
-              onClick={() => setExpandedInstructionsBox(!expandedInstructionsBox)} 
-              size="small"
-            >
-              {expandedInstructionsBox ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-            </IconButton>
-          </Box>
-          <TextField
-            fullWidth
-            multiline
-            rows={expandedInstructionsBox ? 8 : 4}
-            value={additionalInstructions}
-            onChange={(e) => setAdditionalInstructions(e.target.value)}
-            placeholder="Enter writing style instructions or constraints..."
-            variant="outlined"
-            sx={{
-              transition: 'all 0.3s ease',
-              '& .MuiInputBase-root': {
-                fontFamily: 'monospace',
-              }
-            }}
-          />
-        </Box>
-
-        {/* Generation Controls */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {/* Batch Size Selection */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              Number of Variations
-              <Tooltip title="How many different versions to generate">
-                <InfoIcon fontSize="small" color="action" />
-              </Tooltip>
-            </Typography>
-            
-            {/* Custom Size Input */}
-            <TextField
-              size="small"
-              value={customBatchSize}
-              onChange={handleCustomBatchSizeChange}
-              placeholder="Custom number"
-              type="number"
-              InputProps={{
-                endAdornment: customBatchSize && (
-                  <InputAdornment position="end">
-                    <Tooltip title="Clear custom number">
-                      <IconButton
-                        onClick={() => setCustomBatchSize('')}
-                        edge="end"
-                        size="small"
-                      >
-                        ×
-                      </IconButton>
-                    </Tooltip>
-                  </InputAdornment>
-                ),
-              }}
-              sx={{ width: '200px', mb: 1 }}
-            />
-
-            {/* Preset Sizes */}
-            <ToggleButtonGroup
-              value={selectedBatchSize}
-              exclusive
-              onChange={(_, value) => handlePresetBatchSizeSelect(value)}
-              sx={{ 
-                flexWrap: 'wrap',
-                '& .MuiToggleButton-root': {
-                  border: '1px solid rgba(0, 0, 0, 0.12)',
-                  borderRadius: '4px !important',
-                  m: 0.5,
-                }
-              }}
-            >
-              {predefinedBatchSizes.map((size) => (
-                <ToggleButton 
-                  key={size} 
-                  value={size.toString()}
-                  sx={{
-                    px: 2,
-                    py: 1,
-                    minWidth: '60px',
-                    '&.Mui-selected': {
-                      bgcolor: 'primary.main',
-                      color: 'white',
-                      '&:hover': {
-                        bgcolor: 'primary.dark',
-                      },
-                    },
-                  }}
-                >
-                  {size}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          </Box>
-
-          {/* Generate Buttons */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
             <Button
-              variant="contained"
-              startIcon={loading && !generatedData ? <CircularProgress size={20} /> : <AutorenewIcon />}
-              onClick={() => handleGenerate(false)}
-              color="primary"
-              disabled={loading || regenerating || !sampleData.trim()}
-              size="large"
-              sx={{ minWidth: 200 }}
+              variant={showGenerationView ? "contained" : "outlined"}
+              onClick={() => setShowGenerationView(true)}
+              sx={styles.viewToggleButton}
+              startIcon={<AutorenewIcon />}
             >
-              Generate {(customBatchSize || selectedBatchSize || '1')} {
-                (customBatchSize || selectedBatchSize || '1') === '1' ? 'Version' : 'Versions'
-              }
+              Generate Data
             </Button>
-            {generatedData && (
-              <Button
-                variant="outlined"
-                startIcon={regenerating ? <CircularProgress size={20} /> : <RefreshIcon />}
-                onClick={() => handleGenerate(true)}
-                disabled={loading || regenerating}
-                size="large"
-              >
-                Regenerate
-              </Button>
-            )}
+            <Button
+              variant={!showGenerationView ? "contained" : "outlined"}
+              onClick={() => setShowGenerationView(false)}
+              sx={styles.viewToggleButton}
+              startIcon={<HistoryIcon />}
+            >
+              View History
+            </Button>
           </Box>
         </Box>
 
-        {/* Error/Info Display */}
-        {error && (
-          <Alert 
-            severity={error.includes('cached result') ? 'info' : 'error'} 
-            sx={{ mt: 3 }}
-            icon={error.includes('cached result') ? <CachedIcon /> : undefined}
-          >
-            {error}
-          </Alert>
-        )}
-
-        {/* Loading States */}
-        {(isGenerating || regenerating) && (
-          <Box sx={{ mt: 4 }}>
-            <Typography variant="h6" gutterBottom>
-              {regenerating ? 'Regenerating Data...' : 'Generating Data...'}
-            </Typography>
-            <LinearProgress />
-          </Box>
-        )}
-
-        {/* Results Display */}
-        {generatedData && !regenerating && (
-          <Box sx={{ mt: 4 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                Generated Data ({generatedData.length} items)
-                {error?.includes('cached result') && (
-                  <Tooltip title={error}>
-                    <CachedIcon color="action" fontSize="small" />
-                  </Tooltip>
-                )}
+        {showGenerationView ? (
+          <>
+            {/* Model Selection */}
+            <Box sx={{ mb: 4 }}>
+              <Typography sx={styles.sectionSubtitle}>
+                Model Selection
+                <Tooltip title="Choose the AI model for generation">
+                  <InfoIcon fontSize="small" color="action" />
+                </Tooltip>
               </Typography>
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<DownloadIcon />}
-                  onClick={handleDownloadCSV}
-                  disabled={selectedItems.size === 0}
+              <FormControl fullWidth>
+                <InputLabel id="model-select-label">Select Model</InputLabel>
+                <Select
+                  labelId="model-select-label"
+                  value={model}
+                  label="Select Model"
+                  onChange={(e) => handleModelChange(e.target.value as ModelType)}
                 >
-                  Download Selected ({selectedItems.size})
+                  <MenuItem value={ModelType.DEEPSEEK_CHAT}>Deepseek Chat</MenuItem>
+                  <MenuItem value={ModelType.OPENAI_GPT4}>OpenAI GPT-4</MenuItem>
+                  <MenuItem value={ModelType.OPENAI_GPT35}>OpenAI GPT-3.5 Turbo</MenuItem>
+                </Select>
+              </FormControl>
+
+              {showWarning && (
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  Some features may be limited with non-Deepseek models.
+                </Alert>
+              )}
+            </Box>
+
+            {/* Sample Templates Section */}
+            <Collapse in={showSamples}>
+              <Box sx={{ mb: 4 }}>
+                <Typography sx={styles.sectionSubtitle}>
+                  Sample Templates
+                  <Tooltip title="Click on any template to use it as a starting point">
+                    <InfoIcon fontSize="small" color="action" />
+                  </Tooltip>
+                </Typography>
+                <Stack direction="row" spacing={2} sx={{ overflowX: 'auto', pb: 2 }}>
+                  {SAMPLE_DATA.map((sample, index) => (
+                    <Card 
+                      key={index}
+                      sx={{ 
+                        minWidth: 300,
+                        cursor: 'pointer',
+                        '&:hover': { transform: 'translateY(-2px)', boxShadow: 3 },
+                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                      }}
+                      onClick={() => handleSampleClick(sample)}
+                    >
+                      <CardContent>
+                        <Typography variant="h6" gutterBottom>
+                          {sample.title}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ 
+                          height: '80px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 4,
+                          WebkitBoxOrient: 'vertical',
+                        }}>
+                          {sample.template}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Stack>
+              </Box>
+              <Divider sx={{ mb: 4 }} />
+            </Collapse>
+
+            {/* Main Input Section */}
+            <Box sx={{ mb: 4 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography sx={styles.sectionSubtitle}>
+                  Data Sample
+                  <Tooltip title="Use {variable_name} for dynamic values">
+                    <InfoIcon fontSize="small" color="action" />
+                  </Tooltip>
+                </Typography>
+                <IconButton 
+                  onClick={() => setExpandedSampleBox(!expandedSampleBox)} 
+                  size="small"
+                >
+                  {expandedSampleBox ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                </IconButton>
+              </Box>
+              <TextField
+                fullWidth
+                multiline
+                rows={expandedSampleBox ? 8 : 4}
+                value={sampleData}
+                onChange={(e) => setSampleData(e.target.value)}
+                placeholder="Enter your data sample here..."
+                variant="outlined"
+                sx={styles.textInput}
+              />
+            </Box>
+
+            {/* Writing Style Instructions */}
+            <Box sx={{ mb: 4 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography sx={styles.sectionSubtitle}>
+                  Writing Style Instructions
+                  <Tooltip title="Specify the tone, style, and format of the generated content">
+                    <InfoIcon fontSize="small" color="action" />
+                  </Tooltip>
+                </Typography>
+                <IconButton 
+                  onClick={() => setExpandedInstructionsBox(!expandedInstructionsBox)} 
+                  size="small"
+                >
+                  {expandedInstructionsBox ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                </IconButton>
+              </Box>
+              <TextField
+                fullWidth
+                multiline
+                rows={expandedInstructionsBox ? 8 : 4}
+                value={additionalInstructions}
+                onChange={(e) => setAdditionalInstructions(e.target.value)}
+                placeholder="Enter writing style instructions or constraints..."
+                variant="outlined"
+                sx={styles.textInput}
+              />
+            </Box>
+
+            {/* Generation Controls */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <Typography sx={styles.sectionSubtitle}>
+                  Number of Variations
+                  <Tooltip title="How many different versions to generate">
+                    <InfoIcon fontSize="small" color="action" />
+                  </Tooltip>
+                </Typography>
+                
+                {/* Custom Size Input */}
+                <TextField
+                  size="small"
+                  value={customBatchSize}
+                  onChange={handleCustomBatchSizeChange}
+                  placeholder="Custom number"
+                  type="number"
+                  InputProps={{
+                    endAdornment: customBatchSize && (
+                      <InputAdornment position="end">
+                        <Tooltip title="Clear custom number">
+                          <IconButton
+                            onClick={() => setCustomBatchSize('')}
+                            edge="end"
+                            size="small"
+                          >
+                            ×
+                          </IconButton>
+                        </Tooltip>
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ width: '200px', mb: 1 }}
+                />
+
+                {/* Preset Sizes */}
+                <ToggleButtonGroup
+                  value={selectedBatchSize}
+                  exclusive
+                  onChange={(_, value) => handlePresetBatchSizeSelect(value)}
+                  sx={{ 
+                    flexWrap: 'wrap',
+                    '& .MuiToggleButton-root': {
+                      border: '1px solid rgba(0, 0, 0, 0.12)',
+                      borderRadius: '4px !important',
+                      m: 0.5,
+                    }
+                  }}
+                >
+                  {predefinedBatchSizes.map((size) => (
+                    <ToggleButton 
+                      key={size} 
+                      value={size.toString()}
+                      sx={{
+                        px: 2,
+                        py: 1,
+                        minWidth: '60px',
+                        '&.Mui-selected': {
+                          bgcolor: 'primary.main',
+                          color: 'white',
+                          '&:hover': {
+                            bgcolor: 'primary.dark',
+                          },
+                        },
+                      }}
+                    >
+                      {size}
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+              </Box>
+
+              {/* Generate Buttons */}
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
+                <Button
+                  variant="contained"
+                  startIcon={loading && !generatedData ? <CircularProgress size={20} /> : <AutorenewIcon />}
+                  onClick={() => handleGenerate(false)}
+                  color="primary"
+                  disabled={loading || regenerating || !sampleData.trim()}
+                  size="large"
+                  sx={{ minWidth: 200 }}
+                >
+                  Generate {(customBatchSize || selectedBatchSize || '1')} {
+                    (customBatchSize || selectedBatchSize || '1') === '1' ? 'Version' : 'Versions'
+                  }
                 </Button>
+                {generatedData && (
+                  <Button
+                    variant="outlined"
+                    startIcon={regenerating ? <CircularProgress size={20} /> : <RefreshIcon />}
+                    onClick={() => handleGenerate(true)}
+                    disabled={loading || regenerating}
+                    size="large"
+                  >
+                    Regenerate
+                  </Button>
+                )}
               </Box>
             </Box>
 
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        indeterminate={selectedItems.size > 0 && selectedItems.size < generatedData.length}
-                        checked={selectedItems.size === generatedData.length}
-                        onChange={handleSelectAll}
-                      />
-                    </TableCell>
-                    <TableCell>#</TableCell>
-                    <TableCell>Content</TableCell>
-                    <TableCell align="right" sx={{ minWidth: 100 }}>
-                      <Tooltip title="Quality score (0-1)">
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
-                          Score
-                          <InfoIcon fontSize="small" color="action" />
-                        </Box>
+            {/* Error/Info Display */}
+            {error && (
+              <Alert 
+                severity={error.includes('cached result') ? 'info' : 'error'} 
+                sx={{ mt: 3 }}
+                icon={error.includes('cached result') ? <CachedIcon /> : undefined}
+              >
+                {error}
+              </Alert>
+            )}
+
+            {/* Loading States */}
+            {(isGenerating || regenerating) && (
+              <Box sx={{ mt: 4 }}>
+                <Typography variant="h6" gutterBottom>
+                  {regenerating ? 'Regenerating Data...' : 'Generating Data...'}
+                </Typography>
+                <LinearProgress />
+              </Box>
+            )}
+
+            {/* Results Display */}
+            {generatedData && !regenerating && (
+              <Box sx={{ mt: 4 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography sx={styles.sectionSubtitle}>
+                    Generated Results ({generatedData.length} items)
+                    {error?.includes('cached result') && (
+                      <Tooltip title={error}>
+                        <CachedIcon color="action" fontSize="small" />
                       </Tooltip>
-                    </TableCell>
-                    <TableCell align="center" sx={{ minWidth: 120 }}>Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {(generatedData || [])
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((item, index) => {
-                      const actualIndex = page * rowsPerPage + index;
-                      // Parse the content and score properly
-                      const content = typeof item === 'string' ? item : (item?.content || '');
-                      const score = typeof item === 'number' ? item : (typeof item?.score === 'number' ? item.score : 0);
-                      const isGeneratingLikeThis = selectedForRegeneration === actualIndex;
-                      
-                      return (
-                        <TableRow
-                          key={actualIndex}
-                          hover
-                          selected={selectedItems.has(actualIndex)}
-                          sx={{ cursor: 'pointer' }}
-                        >
-                          <TableCell padding="checkbox">
-                            <Checkbox 
-                              checked={selectedItems.has(actualIndex)}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSelectItem(actualIndex);
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>{actualIndex + 1}</TableCell>
-                          <TableCell 
-                            sx={{ 
-                              whiteSpace: 'pre-wrap',
-                              maxWidth: '500px',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              fontFamily: 'monospace',
-                              '& .highlight': {
-                                backgroundColor: theme.palette.action.selected,
-                              }
-                            }}
-                            onClick={() => handleSelectItem(actualIndex)}
-                          >
-                            {content}
-                          </TableCell>
-                          <TableCell align="right">
-                            <Box sx={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              justifyContent: 'flex-end',
-                              gap: 1 
-                            }}>
-                              <LinearProgress 
-                                variant="determinate" 
-                                value={score * 100}
-                                sx={{ 
-                                  width: 60,
-                                  height: 6,
-                                  borderRadius: 3,
-                                  backgroundColor: theme.palette.grey[200],
-                                  '& .MuiLinearProgress-bar': {
-                                    backgroundColor: score >= 0.7 
-                                      ? theme.palette.success.main
-                                      : score >= 0.4 
-                                        ? theme.palette.warning.main
-                                        : theme.palette.error.main,
-                                    borderRadius: 3,
-                                  }
-                                }}
-                              />
-                              <Typography variant="body2" color="text.secondary">
-                                {(score * 100).toFixed(0)}%
-                              </Typography>
+                    )}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<DownloadIcon />}
+                      onClick={handleDownloadCSV}
+                      disabled={selectedItems.size === 0}
+                    >
+                      Download Selected ({selectedItems.size})
+                    </Button>
+                  </Box>
+                </Box>
+
+                <TableContainer component={Paper}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell padding="checkbox">
+                          <Checkbox
+                            indeterminate={selectedItems.size > 0 && selectedItems.size < generatedData.length}
+                            checked={selectedItems.size === generatedData.length}
+                            onChange={handleSelectAll}
+                          />
+                        </TableCell>
+                        <TableCell>#</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            Content
+                            <Tooltip title="Generated content based on your template">
+                              <InfoIcon fontSize="small" color="action" />
+                            </Tooltip>
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right" sx={{ minWidth: 150 }}>
+                          <Tooltip title="AI-evaluated quality score (0-100%)">
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
+                              Quality Score
+                              <InfoIcon fontSize="small" color="action" />
                             </Box>
-                          </TableCell>
-                          <TableCell align="center">
-                            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                              <Tooltip title={isGeneratingLikeThis ? "Generating..." : "Generate similar content"}>
-                                <span>
-                                  <IconButton 
-                                    onClick={() => handleGenerateLikeThis(actualIndex)}
-                                    disabled={selectedForRegeneration !== null}
-                                    color="primary"
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell align="center" sx={{ minWidth: 120 }}>Actions</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {(generatedData || [])
+                        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                        .map((item, index) => {
+                          const actualIndex = page * rowsPerPage + index;
+                          const content = typeof item === 'string' ? item : (item?.content || '');
+                          const score = item.score;
+                          const scoreColor = score >= 0.7 
+                            ? theme.palette.success.main
+                            : score >= 0.4 
+                              ? theme.palette.warning.main
+                              : theme.palette.error.main;
+                          
+                          const isGeneratingLikeThis = selectedForRegeneration === actualIndex;
+                          
+                          return (
+                            <TableRow
+                              key={actualIndex}
+                              hover
+                              selected={selectedItems.has(actualIndex)}
+                              sx={{ 
+                                cursor: 'pointer',
+                                '&:hover': {
+                                  backgroundColor: theme.palette.action.hover,
+                                },
+                                borderLeft: 3,
+                                borderLeftColor: scoreColor,
+                              }}
+                            >
+                              <TableCell padding="checkbox">
+                                <Checkbox 
+                                  checked={selectedItems.has(actualIndex)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelectItem(actualIndex);
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell>{actualIndex + 1}</TableCell>
+                              <TableCell 
+                                sx={{ 
+                                  position: 'relative',
+                                  p: 2,
+                                }}
+                                onClick={() => handleSelectItem(actualIndex)}
+                              >
+                                <Box sx={{
+                                  position: 'relative',
+                                  backgroundColor: theme.palette.background.paper,
+                                  borderRadius: 1,
+                                  p: 2,
+                                  boxShadow: 1,
+                                  '&:hover': {
+                                    boxShadow: 2,
+                                  },
+                                }}>
+                                  <Typography
                                     sx={{
-                                      position: 'relative',
-                                      '&.Mui-disabled': {
-                                        backgroundColor: isGeneratingLikeThis ? theme.palette.action.selected : 'transparent'
-                                      }
+                                      fontFamily: 'monospace',
+                                      fontSize: '0.9rem',
+                                      lineHeight: 1.6,
+                                      whiteSpace: 'pre-wrap',
+                                      maxHeight: '200px',
+                                      overflow: 'auto',
+                                      '&::-webkit-scrollbar': {
+                                        width: '8px',
+                                        height: '8px',
+                                      },
+                                      '&::-webkit-scrollbar-thumb': {
+                                        backgroundColor: theme.palette.grey[300],
+                                        borderRadius: '4px',
+                                      },
                                     }}
                                   >
-                                    {isGeneratingLikeThis ? (
-                                      <CircularProgress 
-                                        size={20} 
+                                    {content}
+                                  </Typography>
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCopyContent(content);
+                                    }}
+                                    sx={{
+                                      position: 'absolute',
+                                      top: 8,
+                                      right: 8,
+                                      opacity: 0.6,
+                                      '&:hover': {
+                                        opacity: 1,
+                                      },
+                                    }}
+                                  >
+                                    <ContentCopyIcon fontSize="small" />
+                                  </IconButton>
+                                </Box>
+                              </TableCell>
+                              <TableCell align="right">
+                                <Box sx={{ 
+                                  display: 'flex', 
+                                  flexDirection: 'column',
+                                  alignItems: 'flex-end',
+                                  gap: 1,
+                                }}>
+                                  <Typography 
+                                    variant="h6" 
+                                    sx={{ 
+                                      color: scoreColor,
+                                      fontWeight: 600,
+                                      minWidth: '60px',
+                                      textAlign: 'right'
+                                    }}
+                                  >
+                                    {typeof score === 'number' ? `${(score * 100).toFixed(0)}%` : 'N/A'}
+                                  </Typography>
+                                  {typeof score === 'number' && score > 0 && (
+                                    <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                      <LinearProgress 
+                                        variant="determinate" 
+                                        value={score * 100}
                                         sx={{ 
-                                          position: 'absolute',
-                                          color: theme.palette.primary.main
+                                          width: '100%',
+                                          height: 8,
+                                          borderRadius: 4,
+                                          backgroundColor: theme.palette.grey[200],
+                                          '& .MuiLinearProgress-bar': {
+                                            backgroundColor: scoreColor,
+                                            borderRadius: 4,
+                                          }
                                         }}
                                       />
-                                    ) : (
-                                      <ContentCopyIcon />
-                                    )}
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      );
-                  })}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            <TablePagination
-              component="div"
-              count={generatedData.length}
-              page={page}
-              onPageChange={handleChangePage}
-              rowsPerPage={rowsPerPage}
-              rowsPerPageOptions={[7]}
-            />
-          </Box>
-        )}
-
-        {/* History Dialog */}
-        {showHistoryDialog && (
-          <Dialog 
-            open={showHistoryDialog} 
-            onClose={() => setShowHistoryDialog(false)}
-            maxWidth="md"
-            fullWidth
-          >
-            <DialogTitle>Generation History</DialogTitle>
-            <DialogContent>
-              <HistoryView />
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setShowHistoryDialog(false)}>Close</Button>
-            </DialogActions>
-          </Dialog>
+                                      <Tooltip title={
+                                        score >= 0.7 ? "High quality content" :
+                                        score >= 0.4 ? "Average quality content" :
+                                        "Low quality content"
+                                      }>
+                                        <Box sx={{ 
+                                          width: 16, 
+                                          height: 16, 
+                                          borderRadius: '50%', 
+                                          backgroundColor: scoreColor,
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                        }}>
+                                          <Typography variant="caption" sx={{ color: 'white', fontSize: '10px' }}>
+                                            {score >= 0.7 ? '★' : score >= 0.4 ? '○' : '!'}
+                                          </Typography>
+                                        </Box>
+                                      </Tooltip>
+                                    </Box>
+                                  )}
+                                </Box>
+                              </TableCell>
+                              <TableCell align="center">
+                                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                                  <Tooltip title={isGeneratingLikeThis ? "Generating..." : "Generate similar content"}>
+                                    <span>
+                                      <IconButton 
+                                        onClick={() => handleGenerateLikeThis(actualIndex)}
+                                        disabled={selectedForRegeneration !== null}
+                                        color="primary"
+                                        sx={{
+                                          position: 'relative',
+                                          '&.Mui-disabled': {
+                                            backgroundColor: isGeneratingLikeThis ? theme.palette.action.selected : 'transparent'
+                                          }
+                                        }}
+                                      >
+                                        {isGeneratingLikeThis ? (
+                                          <CircularProgress 
+                                            size={20} 
+                                            sx={{ 
+                                              position: 'absolute',
+                                              color: theme.palette.primary.main
+                                            }}
+                                          />
+                                        ) : (
+                                          <CompareArrowsIcon />
+                                        )}
+                                      </IconButton>
+                                    </span>
+                                  </Tooltip>
+                                </Box>
+                              </TableCell>
+                            </TableRow>
+                          );
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+                <TablePagination
+                  component="div"
+                  count={generatedData.length}
+                  page={page}
+                  onPageChange={handleChangePage}
+                  rowsPerPage={rowsPerPage}
+                  rowsPerPageOptions={[7]}
+                />
+              </Box>
+            )}
+          </>
+        ) : (
+          <SyntheticDataHistory />
         )}
       </Paper>
     </Box>

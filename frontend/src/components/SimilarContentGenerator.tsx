@@ -51,6 +51,53 @@ interface GenerationHistory {
   timestamp: string;
 }
 
+// Add consistent styling
+const styles = {
+  sectionTitle: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    fontWeight: 600,
+    fontSize: '1.5rem',
+    letterSpacing: '-0.01em',
+    color: 'primary.main',
+    mb: 3
+  },
+  sectionSubtitle: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    fontWeight: 500,
+    fontSize: '1.1rem',
+    letterSpacing: '-0.01em',
+    color: 'text.primary',
+    mb: 2,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1
+  },
+  headerContainer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    mb: 4,
+    borderBottom: 1,
+    borderColor: 'divider',
+    pb: 2
+  },
+  contentBox: {
+    mb: 4,
+    '& .MuiTextField-root': {
+      fontFamily: '"JetBrains Mono", "Fira Code", "Consolas", monospace',
+      fontSize: '0.9rem',
+      letterSpacing: '-0.01em',
+      lineHeight: 1.6,
+      '& .MuiInputBase-root': {
+        padding: 0,
+        '& textarea': {
+          padding: '12px 14px',
+        }
+      }
+    }
+  }
+};
+
 interface SimilarContentGeneratorProps {
   referenceContent: string;
   baseTemplate: string;
@@ -254,26 +301,15 @@ const SimilarContentGenerator: React.FC<SimilarContentGeneratorProps> = ({
           transition={{ duration: 0.5 }}
           sx={{ p: 3 }}
         >
-          {/* Header */}
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, gap: 2 }}>
-            <IconButton onClick={onBack}>
-              <ArrowBackIcon />
-            </IconButton>
-            <Typography variant="h5" color="primary">
-              Similar Content Generation
-            </Typography>
-            <Chip 
-              label={`Generation #${generationNumber}`} 
-              color="primary" 
-              variant="outlined"
-              size="small"
-            />
-            <IconButton 
-              onClick={() => setShowTemplateComparison(!showTemplateComparison)}
-              color={showTemplateComparison ? "primary" : "default"}
-            >
-              <CompareArrowsIcon />
-            </IconButton>
+          <Box sx={styles.headerContainer}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <IconButton onClick={onBack} size="small" sx={{ mr: 1 }}>
+                <ArrowBackIcon />
+              </IconButton>
+              <Typography sx={styles.sectionTitle}>
+                Similar Content Generation #{generationNumber}
+              </Typography>
+            </Box>
           </Box>
 
           {/* Generation Progress */}
@@ -352,8 +388,8 @@ const SimilarContentGenerator: React.FC<SimilarContentGeneratorProps> = ({
           </Collapse>
 
           {/* Batch Size Selection */}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Box sx={styles.contentBox}>
+            <Typography sx={styles.sectionSubtitle}>
               Number of Variations
               <Tooltip title="How many variations to generate">
                 <InfoIcon fontSize="small" color="action" />
@@ -499,26 +535,13 @@ const SimilarContentGenerator: React.FC<SimilarContentGeneratorProps> = ({
           </AnimatePresence>
 
           {/* Expandable Instructions Section */}
-          <Box sx={{ mb: 4 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="subtitle1">
-                Generation Instructions
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <IconButton 
-                  onClick={() => setExpandedTextbox(!expandedTextbox)}
-                  size="small"
-                >
-                  {expandedTextbox ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                </IconButton>
-                <IconButton 
-                  onClick={() => setIsEditing(!isEditing)} 
-                  color={isEditing ? "primary" : "default"}
-                >
-                  <EditIcon />
-                </IconButton>
-              </Box>
-            </Box>
+          <Box sx={styles.contentBox}>
+            <Typography sx={styles.sectionSubtitle}>
+              Generation Instructions
+              <Tooltip title="Customize how the similar content should be generated">
+                <InfoIcon fontSize="small" color="action" />
+              </Tooltip>
+            </Typography>
             <TextField
               fullWidth
               multiline
@@ -531,6 +554,14 @@ const SimilarContentGenerator: React.FC<SimilarContentGeneratorProps> = ({
                 transition: 'all 0.3s ease',
                 '& .MuiInputBase-root': {
                   backgroundColor: isEditing ? 'transparent' : theme.palette.grey[50],
+                  fontFamily: '"JetBrains Mono", "Fira Code", "Consolas", monospace',
+                  fontSize: '0.9rem',
+                  letterSpacing: '-0.01em',
+                  lineHeight: 1.6,
+                  padding: 0,
+                  '& textarea': {
+                    padding: '12px 14px',
+                  }
                 }
               }}
             />

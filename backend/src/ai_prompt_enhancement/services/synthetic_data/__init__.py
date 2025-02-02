@@ -21,7 +21,7 @@ except Exception as e:
     raise
 
 from .generation_service import generator
-from .history_service import history
+from .history_service import history_service as history
 from .cache_service import cache
 
 __all__ = ['generator', 'history', 'cache'] 
