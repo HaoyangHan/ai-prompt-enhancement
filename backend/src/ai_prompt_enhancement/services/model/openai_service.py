@@ -2,7 +2,7 @@
 import json
 import logging
 import re
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Any
 
 from openai import OpenAI
 
@@ -11,6 +11,7 @@ from ai_prompt_enhancement.services.prompt_refinement.prompt_templates import (
     ANALYSIS_TEMPLATE,
     COMPARISON_TEMPLATE,
 )
+from ..synthetic_data.prompt_templates import SYNTHETIC_DATA_TEMPLATE, SIMILAR_CONTENT_TEMPLATE
 
 logger = logging.getLogger(__name__)
 
@@ -26,42 +27,119 @@ class OpenAIService:
         )
         logger.debug("OpenAI client initialized")
     
-    async def generate_content(self, template: str, reference_content: Optional[str] = None) -> str:
+    async def generate_content(self, template: str, batch_size: int = 1) -> Dict[str, Any]:
         """Generate content using the OpenAI model."""
         try:
             logger.info("=== Starting content generation ===")
-            logger.info(f"Template: '{template}'")
-            if reference_content:
-                logger.info(f"Reference content: '{reference_content}'")
+            logger.debug(f"Parameters: template_length={len(template)}, batch_size={batch_size}")
             
-            messages = [
-                {
-                    "role": "system",
-                    "content": "You are a helpful assistant that generates high-quality content based on templates."
-                },
-                {"role": "user", "content": template}
-            ]
-            
-            if reference_content:
-                messages.append({
-                    "role": "user",
-                    "content": f"Use this as reference for style and format: {reference_content}"
-                })
-            
-            response = self.client.chat.completions.create(
-                model=self.settings.openai_model,
-                messages=messages,
-                temperature=0.7,
-                max_tokens=2000
-            )
-            
-            content = response.choices[0].message.content
-            logger.info("Successfully generated content")
-            return content
+            # Generate content
+            try:
+                response = self.client.chat.completions.create(
+                    model=self.settings.openai_model,
+                    messages=[{
+                        "role": "system",
+                        "content": """You are a synthetic data generator that creates high-quality content based on templates.
+                        You MUST return a valid JSON object with the following structure for EACH generated item:
+                        {
+                            "generated_content_1": {
+                                "content": "your generated content here",
+                                "score": 0.85  // float between 0 and 1
+                            }
+                        }"""
+                    }, {
+                        "role": "user",
+                        "content": template
+                    }],
+                    temperature=0.7,
+                    max_tokens=2000,
+                    n=batch_size,  # Request multiple completions
+                    response_format={"type": "json_object"}  # OpenAI-specific: ensure JSON response
+                )
+                
+                # Log the complete response for debugging
+                logger.debug("Raw API Response:")
+                logger.debug(f"Status: {getattr(response, 'status', 'N/A')}")
+                logger.debug(f"Model: {getattr(response, 'model', 'N/A')}")
+                logger.debug(f"Usage: {getattr(response, 'usage', 'N/A')}")
+                
+                if not response.choices:
+                    logger.error("No choices in response")
+                    raise ValueError("Empty response from API")
+                
+                # Process all choices
+                all_content = []
+                for choice in response.choices:
+                    content = choice.message.content
+                    logger.debug(f"Raw generated content: {content}")
+                    
+                    # Attempt to clean and parse the content
+                    try:
+                        # Remove any markdown code block markers
+                        content = re.sub(r'```json\s*|\s*```', '', content)
+                        content = content.strip()
+                        
+                        if not content:
+                            raise ValueError("Empty content after cleaning")
+                        
+                        # Parse JSON and extract content
+                        parsed_content = json.loads(content)
+                        logger.debug(f"Parsed content structure: {list(parsed_content.keys())}")
+                        
+                        # Get the first generated content
+                        first_key = next(iter(parsed_content))
+                        first_item = parsed_content[first_key]
+                        
+                        if not isinstance(first_item, dict):
+                            logger.error(f"Invalid item format: {type(first_item)}")
+                            raise ValueError(f"Expected dict, got {type(first_item)}")
+                        
+                        # Extract and validate content and score
+                        generated_content = first_item.get('content', '')
+                        score = first_item.get('score', None)
+                        
+                        if not generated_content:
+                            raise ValueError("Missing or empty content field")
+                        
+                        if score is None:
+                            logger.warning("Score not found in response, using default")
+                            score = 0.5
+                        else:
+                            try:
+                                score = float(score)
+                                score = max(0.0, min(1.0, score))
+                            except (TypeError, ValueError) as e:
+                                logger.warning(f"Invalid score format: {score}, using default. Error: {e}")
+                                score = 0.5
+                        
+                        all_content.append({
+                            "content": generated_content,
+                            "score": score
+                        })
+                        
+                    except json.JSONDecodeError as e:
+                        logger.error(f"JSON parsing error: {str(e)}")
+                        logger.error(f"Content that failed to parse: {content}")
+                        raise ValueError(f"Invalid JSON response: {str(e)}")
+                
+                logger.info(f"Successfully generated {len(all_content)} items")
+                return {
+                    "content": all_content[0]["content"],  # Keep backward compatibility
+                    "score": all_content[0]["score"],
+                    "all_content": all_content  # Add all generated content
+                }
+                
+            except Exception as e:
+                logger.error(f"Content generation error: {str(e)}")
+                raise ValueError(f"Content generation failed: {str(e)}")
             
         except Exception as e:
-            logger.error(f"Error generating content: {str(e)}")
-            raise
+            logger.error(f"Generation process error: {str(e)}")
+            return {
+                "content": f"Error: {str(e)}",
+                "score": 0.0,
+                "all_content": []
+            }
     
     @staticmethod
     def _clean_text(text: str) -> str:
