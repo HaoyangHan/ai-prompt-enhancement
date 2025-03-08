@@ -1,0 +1,46 @@
+{
+  "metrics": {
+    "clarity": {
+      "score": 0.9,
+      "description": "Evaluation of prompt clarity and specificity",
+      "suggestions": [
+        "Specify the desired length of the summary."
+      ]
+    },
+    "structure": {
+      "score": 0.85,
+      "description": "Assessment of reasoning flow and organization",
+      "suggestions": [
+        "Encourage logical sequencing of points: project updates first, followed by challenges, then next steps."
+      ]
+    },
+    "examples": {
+      "score": 0.7,
+      "description": "Quality and usefulness of examples",
+      "suggestions": [
+        "Provide example summaries to guide the expected output."
+      ]
+    },
+    "formatting": {
+      "score": 0.8,
+      "description": "Markdown and presentation evaluation",
+      "suggestions": [
+        "Use bullet points for clarity in listing items."
+      ]
+    },
+    "output_spec": {
+      "score": 0.75,
+      "description": "Clarity of output specifications",
+      "suggestions": [
+        "Indicate whether the summary should be in paragraph form or bullet points."
+      ]
+    }
+  },
+  "suggestions": [
+    "Overall improvement recommendations",
+    "Consider specifying a word limit for the summary."
+  ],
+  "original_prompt": "Summarize the key points from our quarterly review meeting, including project updates, challenges, and next steps. Keep it concise and actionable.",
+  "enhanced_prompt": "Summarize the key points from our quarterly review meeting, focusing on the following aspects: \n1. Project updates \n2. Challenges encountered \n3. Next steps planned \n\nPlease ensure the summary is concise (ideally within 150 words) and actionable. Use bullet points for each key point to enhance readability.",
+  "model_used": "gpt-4o-mini"
+}

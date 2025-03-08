@@ -1,0 +1,51 @@
+{
+  "metrics": {
+    "clarity": {
+      "score": 0.0,
+      "description": "API request failed",
+      "suggestions": [
+        "Please check your API settings and try again",
+        "The service might be temporarily unavailable"
+      ]
+    },
+    "structure": {
+      "score": 0.0,
+      "description": "API request failed",
+      "suggestions": [
+        "Please check your API settings and try again",
+        "The service might be temporarily unavailable"
+      ]
+    },
+    "examples": {
+      "score": 0.0,
+      "description": "API request failed",
+      "suggestions": [
+        "Please check your API settings and try again",
+        "The service might be temporarily unavailable"
+      ]
+    },
+    "formatting": {
+      "score": 0.0,
+      "description": "API request failed",
+      "suggestions": [
+        "Please check your API settings and try again",
+        "The service might be temporarily unavailable"
+      ]
+    },
+    "output_spec": {
+      "score": 0.0,
+      "description": "API request failed",
+      "suggestions": [
+        "Please check your API settings and try again",
+        "The service might be temporarily unavailable"
+      ]
+    }
+  },
+  "suggestions": [
+    "Please check your API settings and try again",
+    "The service might be temporarily unavailable"
+  ],
+  "enhanced_prompt": "Summarize the key points from our quarterly review meeting, including project updates, challenges, and next steps. Keep it concise and actionable.",
+  "model_used": "deepseek-chat",
+  "original_prompt": "Summarize the key points from our quarterly review meeting, including project updates, challenges, and next steps. Keep it concise and actionable."
+}

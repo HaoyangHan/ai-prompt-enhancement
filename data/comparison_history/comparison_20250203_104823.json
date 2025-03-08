@@ -1,0 +1,90 @@
+{
+  "original_prompt": {
+    "prompt": "As a project manager, I want to create a Jira ticket that accurately reflects the user's needs. Please help me expand the following input into a comprehensive Jira ticket that includes the title, description, priority, and any relevant tags. Return the necessary components in strict JSON format, ensuring that each field is clearly defined.\n\n### Example Input:\n- User's need: [User's actual need goes here]\n\n### Expected Output:\n```json\n{\n  \"title\": \"[Title of the Jira ticket]\",\n  \"description\": \"[Detailed description of the issue]\",\n  \"priority\": \"[Priority level]\",\n  \"tags\": [\"[tag1]\", \"[tag2]\"]\n}\n```",
+    "metrics": {
+      "clarity": {
+        "score": 0.8,
+        "description": "Evaluation of prompt clarity and specificity",
+        "suggestions": [
+          "Consider breaking down the components further for clarity"
+        ]
+      },
+      "structure": {
+        "score": 0.7,
+        "description": "Assessment of reasoning flow and organization",
+        "suggestions": [
+          "Improve the logical flow of the prompt"
+        ]
+      },
+      "examples": {
+        "score": 0.6,
+        "description": "Quality and usefulness of examples",
+        "suggestions": [
+          "Provide more context in the example"
+        ]
+      },
+      "formatting": {
+        "score": 0.5,
+        "description": "Markdown and presentation evaluation",
+        "suggestions": [
+          "Enhance the formatting for better readability"
+        ]
+      },
+      "output_spec": {
+        "score": 0.7,
+        "description": "Clarity of output specifications",
+        "suggestions": [
+          "Clarify the expected output structure"
+        ]
+      }
+    },
+    "suggestions": [
+      "Overall improvement recommendations"
+    ]
+  },
+  "enhanced_prompt": {
+    "prompt": "As a project manager, I want to create a Jira ticket that accurately reflects the user's needs. Please help me expand the following input into a comprehensive Jira ticket. The ticket should include the following components: - Title: A concise title for the ticket - Description: A detailed description of the user's needs - Priority: The priority level (e.g., Low, Medium, High) - Tags: Relevant tags associated with the ticket Please return the necessary components in strict JSON format, ensuring that each field is clearly defined. ### Example Input: - User's need: [User's actual need goes here] ### Expected Output: { \"title\": \"[Title of the Jira ticket]\", \"description\": \"[Detailed description of the issue]\", \"priority\": \"[Priority level]\", \"tags\": [\"[tag1]\", \"[tag2]\"] }",
+    "highlighted_prompt": "As a project manager, I want to create a Jira ticket that accurately reflects the user's needs. Please help me expand the following input into a comprehensive Jira ticket. The ticket should include the following components: - Title: <span style='color:green; font-weight:bold'>A concise title for the ticket</span> - Description: <span style='color:purple; font-style:italic'>A detailed description of the user's needs</span> - Priority: <span style='color:green; font-weight:bold'>The priority level (e.g., Low, Medium, High)</span> - Tags: <span style='color:green; font-weight:bold'>Relevant tags associated with the ticket</span> Please return the necessary components in strict JSON format, ensuring that each field is clearly defined. ### Example Input: - User's need: [User's actual need goes here] ### Expected Output: { \"title\": \"[Title of the Jira ticket]\", \"description\": \"[Detailed description of the issue]\", \"priority\": \"[Priority level]\", \"tags\": [\"[tag1]\", \"[tag2]\"] }",
+    "metrics": {
+      "clarity": {
+        "score": 0.9,
+        "description": "Evaluation of prompt clarity and specificity",
+        "suggestions": [
+          "Clarity has been improved with more specific details"
+        ]
+      },
+      "structure": {
+        "score": 0.85,
+        "description": "Assessment of reasoning flow and organization",
+        "suggestions": [
+          "The flow has been reorganized for better logical progression"
+        ]
+      },
+      "examples": {
+        "score": 0.7,
+        "description": "Quality and usefulness of examples",
+        "suggestions": [
+          "More relevant examples have been added to illustrate the points"
+        ]
+      },
+      "formatting": {
+        "score": 0.75,
+        "description": "Markdown and presentation evaluation",
+        "suggestions": [
+          "Markdown formatting has been improved for better readability"
+        ]
+      },
+      "output_spec": {
+        "score": 0.8,
+        "description": "Clarity of output specifications",
+        "suggestions": [
+          "The expected output format has been clarified"
+        ]
+      }
+    },
+    "suggestions": [
+      "Overall improvement recommendations"
+    ]
+  },
+  "model_used": "gpt-4o-mini"
+}

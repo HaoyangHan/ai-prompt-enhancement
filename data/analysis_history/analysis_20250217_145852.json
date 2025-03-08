@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "clarity": {
+      "score": 0.9,
+      "description": "Evaluation of prompt clarity and specificity",
+      "suggestions": [
+        "Specify the target audience for the product description."
+      ]
+    },
+    "structure": {
+      "score": 0.85,
+      "description": "Assessment of reasoning flow and organization",
+      "suggestions": [
+        "Use bullet points to outline the sustainable features and selling points."
+      ]
+    },
+    "examples": {
+      "score": 0.7,
+      "description": "Quality and usefulness of examples",
+      "suggestions": [
+        "Provide an example product description to illustrate the desired output."
+      ]
+    },
+    "formatting": {
+      "score": 0.8,
+      "description": "Markdown and presentation evaluation",
+      "suggestions": [
+        "Use headings to separate sections of the product description."
+      ]
+    },
+    "output_spec": {
+      "score": 0.75,
+      "description": "Clarity of output specifications",
+      "suggestions": [
+        "Specify length and structure of the product description."
+      ]
+    }
+  },
+  "suggestions": [
+    "Include the target audience and an example description to enhance prompt effectiveness."
+  ],
+  "original_prompt": "Create a compelling product description for a new eco-friendly water bottle. Highlight its sustainable features and unique selling points.",
+  "enhanced_prompt": "Create a compelling product description for a new eco-friendly water bottle aimed at environmentally conscious consumers. Highlight its sustainable features (e.g., made from recycled materials, BPA-free) and unique selling points (e.g., stylish design, durability). Use bullet points for clarity and aim for a length of 150-200 words.",
+  "model_used": "gpt-4o-mini"
+}

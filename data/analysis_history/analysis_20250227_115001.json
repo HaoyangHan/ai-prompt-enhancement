@@ -1,0 +1,49 @@
+{
+  "metrics": {
+    "clarity": {
+      "score": 0.8,
+      "description": "The prompt is generally clear but could benefit from more specific details about the target audience and tone.",
+      "suggestions": [
+        "Specify the target audience for the product description.",
+        "Indicate the desired tone (e.g., casual, professional, inspiring) for the description."
+      ]
+    },
+    "structure": {
+      "score": 0.7,
+      "description": "The structure is straightforward but lacks a clear breakdown of features to highlight.",
+      "suggestions": [
+        "Provide a list format for key features to be included in the description."
+      ]
+    },
+    "examples": {
+      "score": 0.5,
+      "description": "No examples provided, which limits understanding of expectations.",
+      "suggestions": [
+        "Include examples of compelling product descriptions or key selling points."
+      ]
+    },
+    "formatting": {
+      "score": 0.6,
+      "description": "Lacks clear formatting which would enhance readability.",
+      "suggestions": [
+        "Use bullet points for features and selling points."
+      ]
+    },
+    "output_spec": {
+      "score": 0.7,
+      "description": "Output specifications are somewhat clear but could specify the length and format.",
+      "suggestions": [
+        "Indicate the expected length of the product description (e.g., 100-150 words).",
+        "Specify if the output should be in paragraph form or list format."
+      ]
+    }
+  },
+  "suggestions": [
+    "Add details about the target audience and tone.",
+    "Include formatting guidelines for better readability.",
+    "Provide examples of desired outcomes."
+  ],
+  "original_prompt": "Create a compelling product description for a new eco-friendly water bottle. Highlight its sustainable features and unique selling points.",
+  "enhanced_prompt": "Create a compelling product description for a new eco-friendly water bottle aimed at environmentally conscious consumers. Highlight its sustainable features, such as materials used, energy efficiency in production, and durability, as well as its unique selling points like design, usability, and any certifications (e.g., BPA-free). The description should be engaging and inspiring, ideally between 100-150 words. Use bullet points for features if necessary.",
+  "model_used": "gpt-4o-mini"
+}

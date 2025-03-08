@@ -1,0 +1,45 @@
+{
+  "metrics": {
+    "clarity": {
+      "score": 0.85,
+      "description": "Evaluation of prompt clarity and specificity",
+      "suggestions": [
+        "Specify what constitutes a user's need more clearly."
+      ]
+    },
+    "structure": {
+      "score": 0.9,
+      "description": "Assessment of reasoning flow and organization",
+      "suggestions": [
+        "Ensure the order of the components in the output aligns with user expectations."
+      ]
+    },
+    "examples": {
+      "score": 0.75,
+      "description": "Quality and usefulness of examples",
+      "suggestions": [
+        "Provide more realistic examples to enhance understanding."
+      ]
+    },
+    "formatting": {
+      "score": 0.8,
+      "description": "Markdown and presentation evaluation",
+      "suggestions": [
+        "Use bullet points for listing expected output fields."
+      ]
+    },
+    "output_spec": {
+      "score": 0.9,
+      "description": "Clarity of output specifications",
+      "suggestions": [
+        "Emphasize that all fields in the output must be in JSON format."
+      ]
+    }
+  },
+  "suggestions": [
+    "Consider refining the input specifications for user needs and adding more detailed examples."
+  ],
+  "original_prompt": "As a project manager, I want to create a Jira ticket that accurately reflects the user's needs. Please help me expand the following input into a comprehensive Jira ticket that includes the title, description, priority, and any relevant tags. Return the necessary components in strict JSON format, ensuring that each field is clearly defined. ### Example Input: - User's need: [User's actual need goes here] ### Expected Output: ```json { \"title\": \"[Title of the Jira ticket]\", \"description\": \"[Detailed description of the issue]\", \"priority\": \"[Priority level]\", \"tags\": [\"[tag1]\", \"[tag2]\"] } ```",
+  "enhanced_prompt": "As a project manager, I want to create a Jira ticket that accurately reflects the user's needs. Please help me expand the following input into a comprehensive Jira ticket. The ticket should include the following components: - Title: A concise title for the ticket - Description: A detailed description of the user's needs - Priority: The priority level (e.g., Low, Medium, High) - Tags: Relevant tags associated with the ticket Please return the necessary components in strict JSON format, ensuring that each field is clearly defined. ### Example Input: - User's need: [User's actual need goes here] ### Expected Output: { \"title\": \"[Title of the Jira ticket]\", \"description\": \"[Detailed description of the issue]\", \"priority\": \"[Priority level]\", \"tags\": [\"[tag1]\", \"[tag2]\"] }",
+  "model_used": "gpt-4o-mini"
+}
