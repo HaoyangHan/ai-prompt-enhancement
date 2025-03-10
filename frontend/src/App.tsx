@@ -14,6 +14,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemIcon,
   FormControl,
   InputLabel,
   Select,
@@ -31,7 +32,6 @@ import {
   Divider,
   Drawer,
   ListItemButton,
-  ListItemIcon,
   IconButton,
   Chip,
 } from '@mui/material';
@@ -44,8 +44,15 @@ import {
   ChevronLeft as ChevronLeftIcon,
   Refresh as RefreshIcon,
   DatasetOutlined as DatasetIcon,
+  Star as StellarIcon,
 } from '@mui/icons-material';
-import { analyzePrompt, getAnalysisHistory, getComparisonHistory, ModelType } from './config/api';
+import { 
+  analyzePrompt, 
+  getAnalysisHistory, 
+  getComparisonHistory, 
+  comparePrompts,
+  ModelType 
+} from './config/api';
 import ReactMarkdown from 'react-markdown';
 import { format } from 'date-fns';
 import { 
@@ -252,7 +259,7 @@ function App() {
   const [analysis, setAnalysis] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [model, setModel] = useState<ModelType>(ModelType.DEEPSEEK_CHAT);
+  const [model, setModel] = useState<ModelType>(ModelType.STELLAR_CHAT);
   const [showWarning, setShowWarning] = useState(false);
   const [currentView, setCurrentView] = useState<ViewType>('analyze');
   const [comparison, setComparison] = useState<any>(null);
@@ -277,7 +284,11 @@ function App() {
   const [selectedPromptId, setSelectedPromptId] = useState<string>('');
   const [customPrompt, setCustomPrompt] = useState('');
   const [isCustomPrompt, setIsCustomPrompt] = useState(false);
-  const [selectedModels, setSelectedModels] = useState<ModelType[]>([]);
+  const [selectedModels, setSelectedModels] = useState<ModelType[]>([
+    ModelType.STELLAR_CHAT,
+    ModelType.DEEPSEEK_CHAT,
+    ModelType.GPT_4
+  ]);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [promptValidation, setPromptValidation] = useState<{
     isValid: boolean;
@@ -289,35 +300,70 @@ function App() {
 
   const handleModelChange = (newModel: ModelType) => {
     setModel(newModel);
-    setShowWarning(newModel !== ModelType.DEEPSEEK_CHAT);
+    setShowWarning(newModel !== ModelType.STELLAR_CHAT);
+  };
+
+  const handleAnalyzePrompt = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await analyzePrompt({ prompt }, model);
+      setAnalysis(result);
+      setCurrentView('prompt-evaluation');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleComparePrompts = async () => {
+    if (!analysis) return;
+    
+    setLoading(true);
+    setError('');
+    try {
+      const originalPrompt = analysis.prompt;
+      const enhancedPrompt = analysis.suggestions?.join('\n') || '';
+      
+      const result = await comparePrompts({
+        original_prompt: originalPrompt,
+        enhanced_prompt: enhancedPrompt
+      }, model);
+      
+      setComparison(result);
+      setCurrentView('prompt-comparison');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setIsGenerating(true);
     setError('');
-    setAnalyzeStartTime(Date.now());
     try {
-      const response = await analyzePrompt(prompt, model);
-      console.log('Analysis response:', response);
-      setAnalysis({
-        ...response,
-        original_prompt: prompt // Ensure original prompt is preserved
-      });
-      setAnalyzeEndTime(Date.now());
-    } catch (error: any) {
-      console.error('Error:', error);
-      let errorMessage = 'Failed to analyze prompt. Please try again.';
-      if (error.response?.data?.detail) {
-        errorMessage = Array.isArray(error.response.data.detail) 
-          ? error.response.data.detail[0]?.msg || errorMessage
-          : error.response.data.detail;
+      const result = await analyzePrompt({ prompt }, model);
+      setAnalysis(result);
+      setCurrentView('prompt-evaluation');
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('An unknown error occurred');
       }
-      setError(errorMessage);
     } finally {
       setLoading(false);
-      setIsGenerating(false);
     }
   };
 
@@ -1199,13 +1245,37 @@ function App() {
               <InputLabel id="model-select-label">Model</InputLabel>
               <Select
                 labelId="model-select-label"
+                id="model-select"
                 value={model}
                 label="Model"
-                onChange={(e) => handleModelChange(e.target.value as ModelType)}
+                onChange={(e) => setModel(e.target.value as ModelType)}
+                startAdornment={
+                  model === ModelType.STELLAR_CHAT ? (
+                    <StellarIcon sx={{ color: 'gold', mr: 1 }} />
+                  ) : null
+                }
               >
-                <MenuItem value={ModelType.DEEPSEEK_CHAT}>Deepseek Chat</MenuItem>
-                <MenuItem value={ModelType.OPENAI_GPT4}>OpenAI GPT-4</MenuItem>
-                <MenuItem value={ModelType.OPENAI_GPT35}>OpenAI GPT-3.5 Turbo</MenuItem>
+                <MenuItem value={ModelType.STELLAR_CHAT} sx={{ 
+                  fontWeight: 'bold',
+                  '& .MuiListItemIcon-root': { color: 'gold' }
+                }}>
+                  <ListItemIcon>
+                    <StellarIcon />
+                  </ListItemIcon>
+                  Stellar Chat
+                </MenuItem>
+                <MenuItem value={ModelType.DEEPSEEK_CHAT}>
+                  <ListItemIcon>
+                    <DescriptionIcon />
+                  </ListItemIcon>
+                  DeepSeek Chat
+                </MenuItem>
+                <MenuItem value={ModelType.GPT_4}>
+                  <ListItemIcon>
+                    <DescriptionIcon />
+                  </ListItemIcon>
+                  GPT-4
+                </MenuItem>
               </Select>
             </FormControl>
 
@@ -1764,9 +1834,9 @@ function App() {
               onChange={(e) => setSelectedModels(e.target.value as ModelType[])}
               renderValue={(selected) => selected.join(', ')}
             >
+              <MenuItem value={ModelType.STELLAR_CHAT}>Stellar Chat</MenuItem>
               <MenuItem value={ModelType.DEEPSEEK_CHAT}>Deepseek Chat</MenuItem>
-              <MenuItem value={ModelType.OPENAI_GPT4}>OpenAI GPT-4</MenuItem>
-              <MenuItem value={ModelType.OPENAI_GPT35}>OpenAI GPT-3.5 Turbo</MenuItem>
+              <MenuItem value={ModelType.GPT_4}>GPT-4</MenuItem>
             </Select>
           </FormControl>
         </Paper>

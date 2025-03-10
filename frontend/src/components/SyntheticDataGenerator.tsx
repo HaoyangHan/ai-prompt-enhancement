@@ -554,8 +554,8 @@ const SyntheticDataGenerator: React.FC = () => {
                   onChange={(e) => handleModelChange(e.target.value as ModelType)}
                 >
                   <MenuItem value={ModelType.DEEPSEEK_CHAT}>Deepseek Chat</MenuItem>
-                  <MenuItem value={ModelType.OPENAI_GPT4}>OpenAI GPT-4</MenuItem>
-                  <MenuItem value={ModelType.OPENAI_GPT35}>OpenAI GPT-3.5 Turbo</MenuItem>
+                  <MenuItem value={ModelType.GPT_4}>OpenAI GPT-4</MenuItem>
+                  <MenuItem value={ModelType.STELLAR_CHAT}>Stellar Chat</MenuItem>
                 </Select>
               </FormControl>
 
